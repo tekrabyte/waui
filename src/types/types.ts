@@ -57,7 +57,7 @@ export interface Product {
   image?: string;
   available: boolean;
   description?: string;
-  stock: bigint;
+  stock: number;
   outletId?: string;
   isDeleted?: boolean;
 }
