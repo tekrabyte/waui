@@ -591,9 +591,8 @@ export const useGetOverallSummaryOutlet = (outletId: string) =>
 export const useGetBestSellers = (outletId: string) =>
   useQuery({
     queryKey: ['bestSellers', outletId],
-    queryFn: async () => {
-      // Mock data - replace with actual API call when available
-      return [] as Array<{ productId: string; quantity: number; revenue: number }>;
+    queryFn: async (): Promise<Array<[string, number]>> => {
+      return await api.analytics.getBestSellers(outletId);
     },
     enabled: !!outletId,
   });
