@@ -48,12 +48,13 @@ export enum PaymentSubCategory {
 export interface Product {
   id: string;
   name: string;
-  price: bigint;
+  price: number;
   category: string;
+  brand?: string;
   image?: string;
   available: boolean;
   description?: string;
-  stock: bigint;
+  stock: number;
   outletId?: string;
   isDeleted?: boolean;
 }
@@ -61,7 +62,7 @@ export interface Product {
 export interface ProductPackage {
   id: string;
   name: string;
-  price: bigint;
+  price: number;
   description?: string;
   image?: string;
   available: boolean;
@@ -73,8 +74,9 @@ export interface ProductPackage {
     productId: string;
     quantity: number;
   }[];
-  stock?: bigint;
+  stock?: number;
   isActive?: boolean;
+  outletId?: string;
 }
 
 export interface BundleItem {
@@ -85,12 +87,13 @@ export interface BundleItem {
 export interface Bundle {
   id: string;
   name: string;
-  price: bigint;
+  price: number;
   items: BundleItem[];
   image?: string;
   active: boolean;
   description?: string;
-  calculatedStock?: bigint;
+  calculatedStock?: number;
+  outletId?: string;
 }
 
 export interface Category {
@@ -123,13 +126,13 @@ export interface Customer {
   lastOrder?: string;
   status: "online" | "offline";
   unread?: number;
-  registeredAt: bigint;
+  registeredAt?: number;
 }
 
 export interface CartItem extends Product {
   quantity: number;
   type?: "product" | "package" | "bundle";
-  availableStock?: bigint;
+  availableStock?: number;
 }
 
 // ======================================================
@@ -137,18 +140,20 @@ export interface CartItem extends Product {
 // ======================================================
 
 export interface Transaction {
-  id: bigint;
-  total: bigint;
-  timestamp: bigint;
+  id: string;
+  total: number;
+  timestamp?: number;
   userId?: string;
   status?: string;
+  createdAt?: string;
+  outletId?: string;
 }
 
 export interface TransactionItem {
   productId: string;
   name?: string;
-  price: bigint;
-  quantity: bigint;
+  price: number;
+  quantity: number;
   subtotal?: number;
   note?: string;
   isPackage?: boolean;
@@ -160,7 +165,7 @@ export interface PaymentMethod {
   category: PaymentCategory;
   subCategory?: PaymentSubCategory;
   methodName: string;
-  amount: bigint;
+  amount: number;
   name?: string;
   type?: string;
   enabled?: boolean;
@@ -173,16 +178,6 @@ export interface GuestCustomerData {
   address: string;
 }
 
-export interface ProductPackage {
-
-  outletId?: string;
-}
-
-export interface Bundle {
- 
-  outletId?: string;
-}
-
 // ======================================================
 // OUTLET & STAFF
 // ======================================================
@@ -191,10 +186,10 @@ export interface Outlet {
   id: string;
   name: string;
   address: string;
-  phone: string;
-  manager: string;
+  phone?: string;
+  manager?: string;
   isActive: boolean;
-  createdAt: bigint;
+  createdAt?: string;
   status?: string;
 }
 
@@ -203,7 +198,7 @@ export interface Staff {
   name: string;
   email: string;
   role: AppRole | string;
-  outletId: string;
+  outletId?: string;
   status: "active" | "inactive";
   avatar?: string;
 }
@@ -236,11 +231,12 @@ export interface MenuAccessConfig {
 // ======================================================
 
 export interface UserProfile {
+  id: string;
   name: string;
   role: AppRole;
   email?: string;
   outletId?: string;
-  registeredAt?: bigint;
+  registeredAt?: number;
 }
 
 export class Principal {
@@ -270,17 +266,17 @@ export class Principal {
 export interface Expense {
   id: string;
   title: string;
-  amount: bigint;
+  amount: number;
   category: string;
-  date: bigint;
+  date: number;
   note?: string;
   outletId?: string;
 }
 
 export interface CashflowSummary {
-  totalIncome: bigint;
-  totalExpense: bigint;
-  netProfit: bigint;
+  totalIncome: number;
+  totalExpense: number;
+  netProfit: number;
   period: string;
   chartData: {
     date: string;
