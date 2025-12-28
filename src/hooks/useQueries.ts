@@ -552,4 +552,46 @@ export const useSaveMenuAccessConfig = () => {
   });
 };
 
+/* =====================================================
+   DASHBOARD ANALYTICS
+===================================================== */
+
+export const useGetDailySummaryOutlet = (outletId: string) =>
+  useQuery({
+    queryKey: ['dailySummary', outletId],
+    queryFn: async () => {
+      // Mock data - replace with actual API call when available
+      return {
+        totalRevenue: BigInt(0),
+        totalTransactions: BigInt(0),
+        averageTransaction: BigInt(0),
+      };
+    },
+    enabled: !!outletId,
+  });
+
+export const useGetOverallSummaryOutlet = (outletId: string) =>
+  useQuery({
+    queryKey: ['overallSummary', outletId],
+    queryFn: async () => {
+      // Mock data - replace with actual API call when available
+      return {
+        totalRevenue: BigInt(0),
+        totalProducts: BigInt(0),
+        totalCustomers: BigInt(0),
+      };
+    },
+    enabled: !!outletId,
+  });
+
+export const useGetBestSellers = (outletId: string) =>
+  useQuery({
+    queryKey: ['bestSellers', outletId],
+    queryFn: async () => {
+      // Mock data - replace with actual API call when available
+      return [] as Array<{ productId: bigint; quantity: bigint; revenue: bigint }>;
+    },
+    enabled: !!outletId,
+  });
+
   
