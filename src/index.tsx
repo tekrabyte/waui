@@ -1,10 +1,25 @@
 import './index.css';
-import React from "react";
-import { createRoot } from "react-dom/client"; // Gunakan createRoot dari react-dom/client
+import { createRoot } from "react-dom/client"; 
 import { App } from "./App";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// 1. Buat Client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Opsional: agar tidak refresh saat pindah tab
+      retry: 1,
+    },
+  },
+});
 
 const container = document.getElementById("root");
 if (container) {
   const root = createRoot(container);
-  root.render(<App />);
+  // 2. Bungkus App dengan Provider
+  root.render(
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  );
 }

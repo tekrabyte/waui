@@ -302,6 +302,25 @@ export const api = {
     }
   },
 
+  
+settings: {
+    getMenuAccess: async (): Promise<MenuAccessConfig> => {
+      const response = await fetch(`${BASE_URL}/settings/menu-access`, { headers: getAuthHeaders() });
+      // Fallback jika API belum siap, return null agar frontend pakai default
+      if (response.status === 404) return null as any; 
+      return handleResponse(response);
+    },
+    saveMenuAccess: async (config: MenuAccessConfig) => {
+      const response = await fetch(`${BASE_URL}/settings/menu-access`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(config)
+      });
+      return handleResponse(response);
+    }
+  },
+
+
   // 9. EXPENSES / CASHFLOW
   expenses: {
     getAll: async () => {
