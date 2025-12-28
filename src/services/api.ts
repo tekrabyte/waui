@@ -354,15 +354,14 @@ export const api = {
       return data.map((e: any) => ({
         id: String(e.id),
         title: e.title,
-        amount: BigInt(e.amount),
+        amount: Number(e.amount),
         category: e.category,
-        date: BigInt(e.date || Date.now() * 1000000),
+        date: Number(e.date || Date.now()),
         note: e.note,
         outletId: e.outlet_id ? String(e.outlet_id) : undefined
       }));
     },
     create: async (data: any) => {
-      // Konversi BigInt ke number sebelum kirim JSON
       const payload = {
         ...data,
         amount: Number(data.amount),
