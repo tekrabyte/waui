@@ -299,3 +299,34 @@ export interface CashflowSummary {
     expense: number;
   }[];
 }
+
+// ======================================================
+// SETTINGS & CONFIGURATION
+// ======================================================
+
+export interface PaymentSettings {
+  qrisEnabled: boolean;
+  uploadEnabled: boolean;
+  takeawayEnabled?: boolean;
+  deliveryEnabled?: boolean;
+  qrisStaticEnabled?: boolean;
+  bankTransferEnabled?: boolean;
+  qrisStaticImageBlob?: string | null;
+  qrisMerchantName?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
+}
+
+export interface DashboardSummary {
+  totalRevenue: number;
+  totalTransactions: number;
+  transactionCount?: number;
+  averageTransaction: number;
+}
+
+export interface BestSellerItem {
+  productId: string;
+  quantity: number;
+  revenue: number;
+}
