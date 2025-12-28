@@ -40,10 +40,13 @@ interface GuestProfileData {
 const GUEST_DATA_KEY = 'kiosk_guest_data';
 
 export default function KioskPage() {
-  const { identity, login } = useInternetIdentity();
+  // Mock identity - replace with actual auth hook when available
+  const identity = null;
+  const login = () => console.log('Login');
+  
   const { data: userProfile } = useGetCallerUserProfile();
   const { data: outlets } = useListOutlets();
-  const [selectedOutletId, setSelectedOutletId] = useState<bigint | null>(null);
+  const [selectedOutletId, setSelectedOutletId] = useState<string | null>(null);
   const { data: products } = useListProductsByOutlet(selectedOutletId);
   const { data: packages } = useListActivePackages(selectedOutletId);
   const { data: bundles } = useListActiveBundles(selectedOutletId);
@@ -58,7 +61,7 @@ export default function KioskPage() {
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
-  const [currentTransactionId, setCurrentTransactionId] = useState<bigint | null>(null);
+  const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null);
   const [guestData, setGuestData] = useState<GuestProfileData>({
     name: '',
     phone: '',
