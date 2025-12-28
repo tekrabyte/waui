@@ -427,5 +427,107 @@ export const api = {
         chartData: data.chart_data || []
       };
     }
+  },
+
+  // 13. ANALYTICS / REPORTS
+  analytics: {
+    getTopOutlets: async (): Promise<Array<[string, number]>> => {
+      try {
+        const response = await fetch(`${BASE_URL}/reports/top-outlets`, { headers: getAuthHeaders() });
+        const data = await handleResponse(response);
+        // Expected format: [{outlet_id: "1", revenue: 1000000}, ...]
+        return data.map((item: any) => [String(item.outlet_id), Number(item.revenue || 0)]);
+      } catch (error) {
+        // Fallback: aggregate from transactions if endpoint doesn't exist
+        const transactions = await api.transactions.getAll();
+        const revenueByOutlet: Record<string, number> = {};
+        
+        transactions.forEach((txn: any) => {
+          const outletId = String(txn.outlet_id || txn.outletId || '0');
+          const total = Number(txn.total || 0);
+          revenueByOutlet[outletId] = (revenueByOutlet[outletId] || 0) + total;
+        });
+        
+        return Object.entries(revenueByOutlet)
+          .map(([outletId, revenue]) => [outletId, revenue] as [string, number])
+          .sort((a, b) => b[1] - a[1]);
+      }
+    },
+    
+    getDailySummary: async (outletId: string): Promise<{ transactionCount: number; totalRevenue: number }> => {
+      try {
+        const response = await fetch(`${BASE_URL}/reports/daily-summary?outlet_id=${outletId}`, { headers: getAuthHeaders() });
+        const data = await handleResponse(response);
+        return {
+          transactionCount: Number(data.transaction_count || 0),
+          totalRevenue: Number(data.total_revenue || 0)
+        };
+      } catch (error) {
+        // Fallback: calculate from transactions
+        const transactions = await api.transactions.getAll();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTimestamp = today.getTime();
+        
+        const todayTransactions = transactions.filter((txn: any) => {
+          const txnOutletId = String(txn.outlet_id || txn.outletId || '0');
+          const txnDate = new Date(txn.created_at || txn.timestamp || 0);
+          return txnOutletId === outletId && txnDate.getTime() >= todayTimestamp;
+        });
+        
+        return {
+          transactionCount: todayTransactions.length,
+          totalRevenue: todayTransactions.reduce((sum: number, txn: any) => sum + Number(txn.total || 0), 0)
+        };
+      }
+    },
+    
+    getOverallSummary: async (outletId: string): Promise<[number, number]> => {
+      try {
+        const response = await fetch(`${BASE_URL}/reports/overall-summary?outlet_id=${outletId}`, { headers: getAuthHeaders() });
+        const data = await handleResponse(response);
+        return [Number(data.transaction_count || 0), Number(data.total_revenue || 0)];
+      } catch (error) {
+        // Fallback: calculate from transactions
+        const transactions = await api.transactions.getAll();
+        const outletTransactions = transactions.filter((txn: any) => {
+          const txnOutletId = String(txn.outlet_id || txn.outletId || '0');
+          return txnOutletId === outletId;
+        });
+        
+        return [
+          outletTransactions.length,
+          outletTransactions.reduce((sum: number, txn: any) => sum + Number(txn.total || 0), 0)
+        ];
+      }
+    },
+    
+    getBestSellers: async (outletId: string): Promise<Array<[string, number]>> => {
+      try {
+        const response = await fetch(`${BASE_URL}/reports/best-sellers?outlet_id=${outletId}`, { headers: getAuthHeaders() });
+        const data = await handleResponse(response);
+        // Expected format: [{product_id: "1", quantity: 100}, ...]
+        return data.map((item: any) => [String(item.product_id), Number(item.quantity || 0)]);
+      } catch (error) {
+        // Fallback: aggregate from transactions
+        const transactions = await api.transactions.getAll();
+        const productSales: Record<string, number> = {};
+        
+        transactions.forEach((txn: any) => {
+          const txnOutletId = String(txn.outlet_id || txn.outletId || '0');
+          if (txnOutletId === outletId && txn.items) {
+            txn.items.forEach((item: any) => {
+              const productId = String(item.product_id || item.productId);
+              const quantity = Number(item.quantity || 0);
+              productSales[productId] = (productSales[productId] || 0) + quantity;
+            });
+          }
+        });
+        
+        return Object.entries(productSales)
+          .map(([productId, quantity]) => [productId, quantity] as [string, number])
+          .sort((a, b) => b[1] - a[1]);
+      }
+    }
   }
   };
