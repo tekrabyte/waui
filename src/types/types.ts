@@ -7,6 +7,7 @@ export const AppRole = {
   owner: "owner",
   admin: "admin",
   administrator: "administrator",
+  manager: "manager",
   cashier: "cashier",
   staff: "staff",
   user: "user",
