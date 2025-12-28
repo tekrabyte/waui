@@ -179,7 +179,7 @@ export interface PaymentMethod {
   category: PaymentCategory;
   subCategory?: PaymentSubCategory;
   methodName: string;
-  amount: number;
+  amount: bigint;
   name?: string;
   type?: string;
   enabled?: boolean;
