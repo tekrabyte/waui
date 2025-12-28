@@ -594,4 +594,42 @@ export const useGetBestSellers = (outletId: string) =>
     enabled: !!outletId,
   });
 
+/* =====================================================
+   PAYMENT & TRANSACTION HISTORY
+===================================================== */
+
+export const useGetUserTransactionHistory = () =>
+  useQuery({
+    queryKey: ['userTransactionHistory'],
+    queryFn: async () => {
+      // Mock data - replace with actual API call when available
+      return [] as any[];
+    },
+  });
+
+export const useGetPaymentSettings = () =>
+  useQuery({
+    queryKey: ['paymentSettings'],
+    queryFn: async () => {
+      // Mock data - replace with actual API call when available
+      return {
+        qrisEnabled: false,
+        uploadEnabled: true,
+      };
+    },
+  });
+
+export const useUploadPaymentProof = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { transactionId: string; file: File }) => {
+      // Mock upload - replace with actual API call when available
+      return { success: true };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['userTransactionHistory'] });
+    },
+  });
+};
+
   
