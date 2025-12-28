@@ -57,3 +57,13 @@ export interface PaymentMethod {
   enabled: boolean;
   transactionFee: number;
 }
+export interface MenuAccess {
+  menu: string;
+  isAccessible: boolean;
+}
+
+export interface MenuAccessConfig {
+  manager: MenuAccess[];
+  cashier: MenuAccess[];
+  owner: MenuAccess[];
+}

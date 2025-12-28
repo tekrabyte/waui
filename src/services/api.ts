@@ -1,5 +1,4 @@
-import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer } from '../types';
-
+import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer, MenuAccessConfig } from '../types';
 const BASE_URL = 'https://erpos.tekrabyte.id/wp-json/posq/v1';
 
 // --- HELPER FUNCTIONS ---
@@ -338,17 +337,10 @@ settings: {
   },
 
   // 10. CUSTOMERS
-  customers: {
-    getAll: async (): Promise<Customer[]> => {
+ customers: {
+    getAll: async () => {
       const response = await fetch(`${BASE_URL}/customers`, { headers: getAuthHeaders() });
-      const data = await handleResponse(response);
-      return data.map((c: any) => ({
-        id: String(c.id),
-        name: c.name,
-        lastOrder: c.last_order_date || '-',
-        status: c.status || 'offline',
-        unread: 0
-      }));
+      return handleResponse(response);
     }
-  }
+  },
 };
