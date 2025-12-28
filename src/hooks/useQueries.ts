@@ -421,6 +421,17 @@ export const useCreateTransaction = () => {
   });
 };
 
+export const useUpdateTransactionStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.transactions.updateStatus ? api.transactions.updateStatus(id, status) : Promise.resolve(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+};
+
 /* =====================================================
    CATEGORY & BRAND
 ===================================================== */
