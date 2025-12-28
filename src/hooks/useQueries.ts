@@ -582,13 +582,8 @@ export const useGetDailySummaryOutlet = (outletId: string) =>
 export const useGetOverallSummaryOutlet = (outletId: string) =>
   useQuery({
     queryKey: ['overallSummary', outletId],
-    queryFn: async () => {
-      // Mock data - replace with actual API call when available
-      return {
-        totalRevenue: 0,
-        totalProducts: 0,
-        totalCustomers: 0,
-      };
+    queryFn: async (): Promise<[number, number]> => {
+      return await api.analytics.getOverallSummary(outletId);
     },
     enabled: !!outletId,
   });
