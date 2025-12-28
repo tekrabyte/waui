@@ -50,12 +50,14 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: string;
+  category?: string;
+  categoryId?: bigint;
   brand?: string;
+  brandId?: bigint;
   image?: string;
   available: boolean;
   description?: string;
-  stock: number;
+  stock: bigint;
   outletId?: string;
   isDeleted?: boolean;
 }
