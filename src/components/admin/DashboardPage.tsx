@@ -35,7 +35,7 @@ export default function DashboardPage() {
 function OwnerDashboard({ outlets }: { outlets: any[] }) {
   const { data: topOutlets, isLoading: topOutletsLoading } = useGetTopOutlets();
 
-  const formatCurrency = (amount: bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -47,8 +47,8 @@ function OwnerDashboard({ outlets }: { outlets: any[] }) {
   const totalRevenue = topOutlets?.reduce((sum, [_, revenue]) => sum + Number(revenue), 0) || 0;
   const activeOutlets = outlets.filter(o => o.isActive).length;
 
-  const getOutletName = (outletId: bigint) => {
-    const outlet = outlets.find(o => o.id === outletId);
+  const getOutletName = (outletId: string) => {
+    const outlet = outlets.find(o => String(o.id) === String(outletId));
     return outlet?.name || `Outlet #${outletId}`;
   };
 
