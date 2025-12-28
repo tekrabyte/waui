@@ -316,7 +316,11 @@ export const useMarkBundleInactive = () => {
 export const useGetAllCustomers = () =>
   useQuery({
     queryKey: ['customers'],
-    queryFn: async () => api.customers.getAll(),
+    queryFn: async () => {
+      const res = await api.customers.getAll();
+      // Ensure we return an array
+      return Array.isArray(res) ? res : [];
+    },
   });
 
 export const useListStaff = () =>
