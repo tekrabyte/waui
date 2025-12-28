@@ -159,6 +159,8 @@ export interface Transaction {
   status?: string;
   createdAt?: string;
   outletId?: string;
+  items?: TransactionItem[];
+  paymentMethods?: PaymentMethod[];
 }
 
 export interface TransactionItem {
