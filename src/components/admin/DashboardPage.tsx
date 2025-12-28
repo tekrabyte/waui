@@ -288,7 +288,7 @@ function OutletDashboard({ outletId }: { outletId: string }) {
             {overallLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <p className="text-2xl font-bold">{formatCurrency(overallSummary?.[1] || BigInt(0))}</p>
+              <p className="text-2xl font-bold">{formatCurrency(overallSummary?.[1] || 0)}</p>
             )}
             <p className="text-xs text-muted-foreground mt-1">Semua waktu</p>
           </CardContent>
