@@ -77,7 +77,7 @@ export interface ProductPackage {
     productId: string;
     quantity: number;
   }[];
-  stock?: number;
+  stock?: bigint;
   isActive?: boolean;
   outletId?: string;
 }
