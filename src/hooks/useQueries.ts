@@ -180,6 +180,30 @@ export const useListPackages = () =>
     },
   });
 
+export const useCreatePackage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.packages.getAll(), // Placeholder - need API endpoint
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
+export const useUpdatePackage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.packages.getAll(), // Placeholder
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
+export const useMarkPackageInactive = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.packages.getAll(), // Placeholder
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
 export const useListBundles = () =>
   useQuery({
     queryKey: ['bundles'],
@@ -192,6 +216,47 @@ export const useListBundles = () =>
       }));
     },
   });
+
+export const useListActiveBundles = (outletId?: string | null) =>
+  useQuery({
+    queryKey: ['bundles', outletId],
+    queryFn: async (): Promise<Bundle[]> => {
+      const res = await api.bundles.getAll();
+      return res
+        .filter((b: any) => !outletId || b.outletId === outletId)
+        .map((b: any) => ({
+          id: String(b.id),
+          name: b.name,
+          price: Number(b.price),
+          items: b.items ?? [],
+          active: !!b.active,
+        }));
+    },
+  });
+
+export const useCreateBundle = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.bundles.getAll(), // Placeholder
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+  });
+};
+
+export const useUpdateBundle = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.bundles.getAll(), // Placeholder
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+  });
+};
+
+export const useMarkBundleInactive = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.bundles.getAll(), // Placeholder
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+  });
+};
 
 /* =====================================================
    CUSTOMER & STAFF
