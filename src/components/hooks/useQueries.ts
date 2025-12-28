@@ -573,9 +573,10 @@ export const useGetDailySummaryOutlet = (outletId: string) =>
     queryFn: async () => {
       // Mock data - replace with actual API call when available
       return {
-        totalRevenue: BigInt(0),
-        totalTransactions: BigInt(0),
-        averageTransaction: BigInt(0),
+        totalRevenue: 0,
+        totalTransactions: 0,
+        transactionCount: 0,
+        averageTransaction: 0,
       };
     },
     enabled: !!outletId,
@@ -587,9 +588,9 @@ export const useGetOverallSummaryOutlet = (outletId: string) =>
     queryFn: async () => {
       // Mock data - replace with actual API call when available
       return {
-        totalRevenue: BigInt(0),
-        totalProducts: BigInt(0),
-        totalCustomers: BigInt(0),
+        totalRevenue: 0,
+        totalProducts: 0,
+        totalCustomers: 0,
       };
     },
     enabled: !!outletId,
@@ -600,7 +601,7 @@ export const useGetBestSellers = (outletId: string) =>
     queryKey: ['bestSellers', outletId],
     queryFn: async () => {
       // Mock data - replace with actual API call when available
-      return [] as Array<{ productId: bigint; quantity: bigint; revenue: bigint }>;
+      return [] as Array<{ productId: string; quantity: number; revenue: number }>;
     },
     enabled: !!outletId,
   });
