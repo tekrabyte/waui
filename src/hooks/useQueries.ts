@@ -366,6 +366,23 @@ export const useListAllTransactions = () =>
     },
   });
 
+export const useListMyTransactions = (outletId?: string) =>
+  useQuery({
+    queryKey: ['transactions', 'my', outletId],
+    queryFn: async () => {
+      const res = await api.transactions.getAll();
+      return res
+        .filter((t: any) => !outletId || t.outletId === outletId)
+        .map((t: any) => ({
+          id: String(t.id),
+          total: Number(t.total),
+          status: t.status,
+          createdAt: t.created_at,
+          outletId: t.outletId,
+        }));
+    },
+  });
+
 export const useCreateTransaction = () => {
   const qc = useQueryClient();
   return useMutation({
