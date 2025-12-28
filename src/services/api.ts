@@ -419,12 +419,20 @@ export const api = {
       const data = await handleResponse(response);
       
       return {
-        totalIncome: BigInt(data.total_income || 0),
-        totalExpense: BigInt(data.total_expense || 0),
-        netProfit: BigInt(data.net_profit || 0),
+        totalIncome: Number(data.total_income || 0),
+        totalExpense: Number(data.total_expense || 0),
+        netProfit: Number(data.net_profit || 0),
         period: period,
         chartData: data.chart_data || []
       };
+    }
+  },
+  
+  // 13. BUNDLES
+  bundles: {
+    getAll: async () => {
+      const response = await fetch(`${BASE_URL}/bundles`, { headers: getAuthHeaders() });
+      return handleResponse(response);
     }
   }
   };
