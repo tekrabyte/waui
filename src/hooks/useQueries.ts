@@ -627,6 +627,15 @@ export const useGetPaymentSettings = () =>
       return {
         qrisEnabled: false,
         uploadEnabled: true,
+        takeawayEnabled: false,
+        deliveryEnabled: false,
+        qrisStaticEnabled: false,
+        bankTransferEnabled: false,
+        qrisStaticImageBlob: null,
+        qrisMerchantName: '',
+        bankName: '',
+        bankAccountNumber: '',
+        bankAccountName: '',
       };
     },
   });
