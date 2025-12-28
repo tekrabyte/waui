@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, Users } from 'lucide-react';
-import { AppRole, UserProfile, Principal } from '../../types';
+import { AppRole, UserProfile, Principal } from '../../types/types';
 
 export default function StaffManagementPage() {
   const { data: users, isLoading } = useListAllUsers(); 

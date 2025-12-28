@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { InventoryItem } from '../../types';
+import { InventoryItem } from '../../types/types';
 import { api } from '../../services/api';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Settings, AlertCircle, RotateCcw } from 'lucide-react';
-import type { MenuAccess } from '../../types';
+import type { MenuAccess } from '../../types/types';
 
 interface MenuAccessState {
   manager: MenuAccess[];

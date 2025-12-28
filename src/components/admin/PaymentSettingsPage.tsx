@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PaymentMethod } from '../../types';
+import { PaymentMethod } from '../../types/types';
 import { api } from '../../services/api';
 import { CreditCard, Smartphone, Banknote, QrCode } from 'lucide-react';
 

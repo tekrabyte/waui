@@ -1,45 +1,59 @@
 // src/types.ts
 
-// --- ENUMS & LOGIC ---
+// ======================================================
+// ENUMS & CONSTANTS (RUNTIME-SAFE)
+// ======================================================
+export const AppRole = {
+  owner: "owner",
+  admin: "admin",
+  administrator: "administrator",
+  cashier: "cashier",
+  staff: "staff",
+  user: "user",
+  guest: "guest",
+} as const;
 
-export enum AppRole {
-  owner = 'owner',
-  admin = 'admin',
-  manager = 'manager',
-  cashier = 'cashier'
-}
+export type AppRole = typeof AppRole[keyof typeof AppRole];
 
-export type OrderStatus = 'pending' | 'processing' | 'ready' | 'completed' | 'canceled' | 'refunded';
+export type OrderStatus =
+  | "pending"
+  | "processing"
+  | "ready"
+  | "completed"
+  | "canceled"
+  | "refunded";
 
 export enum PaymentCategory {
-  offline = 'offline',
-  online = 'online',
-  foodDelivery = 'foodDelivery'
+  offline = "offline",
+  online = "online",
+  foodDelivery = "foodDelivery"
 }
 
 export enum PaymentSubCategory {
-  qris = 'qris',
-  eWallet = 'eWallet',
-  debit = 'debit',
-  credit = 'credit',
-  transfer = 'transfer',
-  cash = 'cash',
-  shopeeFood = 'shopeeFood',
-  goFood = 'goFood',
-  grabFood = 'grabFood'
+  qris = "qris",
+  eWallet = "eWallet",
+  debit = "debit",
+  credit = "credit",
+  transfer = "transfer",
+  cash = "cash",
+  shopeeFood = "shopeeFood",
+  goFood = "goFood",
+  grabFood = "grabFood"
 }
 
-// --- DOMAIN MODELS ---
+// ======================================================
+// PRODUCT & CATALOG
+// ======================================================
 
 export interface Product {
   id: string;
   name: string;
-  price: bigint;      // Admin page perlu BigInt
+  price: bigint;
   category: string;
   image?: string;
   available: boolean;
   description?: string;
-  stock: bigint;      // Admin page perlu BigInt
+  stock: bigint;
   outletId?: string;
   isDeleted?: boolean;
 }
@@ -51,7 +65,6 @@ export interface ProductPackage {
   description?: string;
   image?: string;
   available: boolean;
-  // Support 'items' DAN 'components' agar kompatibel dengan kode lama & baru
   items: {
     productId: string;
     quantity: number;
@@ -69,8 +82,6 @@ export interface BundleItem {
   quantity: number;
 }
 
-
-
 export interface Bundle {
   id: string;
   name: string;
@@ -87,16 +98,21 @@ export interface Category {
   name: string;
   icon?: string;
   count?: number;
-  description?: string; // Tambahan
-  isActive?: boolean;   // Tambahan
+  description?: string;
+  isActive?: boolean;
 }
 
-export interface Brand { // Interface Baru
+export interface Brand {
   id: string;
   name: string;
   description?: string;
   isActive?: boolean;
 }
+
+// ======================================================
+// CUSTOMER & CART
+// ======================================================
+
 export interface Customer {
   id: string;
   name: string;
@@ -105,18 +121,28 @@ export interface Customer {
   address?: string;
   avatar?: string;
   lastOrder?: string;
-  status: 'online' | 'offline';
+  status: "online" | "offline";
   unread?: number;
   registeredAt: bigint;
 }
 
 export interface CartItem extends Product {
   quantity: number;
-  type?: 'product' | 'package' | 'bundle';
+  type?: "product" | "package" | "bundle";
   availableStock?: bigint;
 }
 
-// --- TRANSACTION & PAYMENT ---
+// ======================================================
+// TRANSACTION & PAYMENT
+// ======================================================
+
+export interface Transaction {
+  id: bigint;
+  total: bigint;
+  timestamp: bigint;
+  userId?: string;
+  status?: string;
+}
 
 export interface TransactionItem {
   productId: string;
@@ -135,7 +161,6 @@ export interface PaymentMethod {
   subCategory?: PaymentSubCategory;
   methodName: string;
   amount: bigint;
-  // Field optional untuk kompatibilitas
   name?: string;
   type?: string;
   enabled?: boolean;
@@ -148,7 +173,19 @@ export interface GuestCustomerData {
   address: string;
 }
 
-// --- ADMIN & BACKEND TYPES ---
+export interface ProductPackage {
+
+  outletId?: string;
+}
+
+export interface Bundle {
+ 
+  outletId?: string;
+}
+
+// ======================================================
+// OUTLET & STAFF
+// ======================================================
 
 export interface Outlet {
   id: string;
@@ -156,8 +193,8 @@ export interface Outlet {
   address: string;
   phone: string;
   manager: string;
-  isActive: boolean;  // Digunakan oleh OutletsManagementPage
-  createdAt: bigint;  // Digunakan oleh OutletsManagementPage
+  isActive: boolean;
+  createdAt: bigint;
   status?: string;
 }
 
@@ -167,9 +204,13 @@ export interface Staff {
   email: string;
   role: AppRole | string;
   outletId: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   avatar?: string;
 }
+
+// ======================================================
+// ACCESS & MENU
+// ======================================================
 
 export interface InventoryItem {
   productId: string;
@@ -190,7 +231,9 @@ export interface MenuAccessConfig {
   owner: MenuAccess[];
 }
 
-// --- IDENTITY / LEGACY TYPES (Wajib untuk Staff & Customer Page) ---
+// ======================================================
+// USER / IDENTITY (LEGACY SAFE)
+// ======================================================
 
 export interface UserProfile {
   name: string;
@@ -200,10 +243,9 @@ export interface UserProfile {
   registeredAt?: bigint;
 }
 
-// Class Principal tiruan untuk kompatibilitas dengan kode admin yang mungkin pakai Dfinity/IC logic
 export class Principal {
   private _id: string;
-  
+
   constructor(id: string) {
     this._id = id;
   }
@@ -221,14 +263,16 @@ export class Principal {
   }
 }
 
-// --- FINANCE & EXPENSES ---
+// ======================================================
+// FINANCE
+// ======================================================
 
 export interface Expense {
   id: string;
   title: string;
   amount: bigint;
-  category: string; // e.g., 'operational', 'salary', 'purchase', 'other'
-  date: bigint;     // Timestamp
+  category: string;
+  date: bigint;
   note?: string;
   outletId?: string;
 }
@@ -237,7 +281,7 @@ export interface CashflowSummary {
   totalIncome: bigint;
   totalExpense: bigint;
   netProfit: bigint;
-  period: string; // 'daily', 'weekly', 'monthly'
+  period: string;
   chartData: {
     date: string;
     income: number;

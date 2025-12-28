@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Pencil, Store } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import type { Outlet } from '../../types';
+import type { Outlet } from '../../types/types';
 
 export default function OutletsManagementPage() {
   const { data: isAdmin } = useIsCallerAdmin();

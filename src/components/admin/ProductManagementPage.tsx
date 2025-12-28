@@ -30,7 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Product, ProductPackage, PackageComponent, Bundle, BundleItem } from '../../types';
+import type { Product, ProductPackage, PackageComponent, Bundle, BundleItem } from '../../types/types';
 import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
 
 interface ComponentInput {
@@ -398,13 +398,13 @@ export default function ProductManagementPage() {
   };
 
   const getOutletName = (outletId: bigint) => {
-    const outlet = outlets?.find(o => o.id === outletId);
+    const outlet = outlets?.find(o => o.id === outletId.toString()) ;
     return outlet?.name || `Outlet #${outletId}`;
   };
 
   const getCategoryName = (categoryId?: bigint) => {
     if (!categoryId) return '-';
-    const category = categories?.find(c => c.id === categoryId);
+    const category = categories?.find(c => c.id === categoryId.toString()) ;
     return category?.name || '-';
   };
 

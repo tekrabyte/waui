@@ -1,4 +1,4 @@
-import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer, Expense, CashflowSummary } from '../../types';
+import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer, Expense, CashflowSummary } from '../types';
 const BASE_URL = 'https://erpos.tekrabyte.id/wp-json/posq/v1';
 
 // --- HELPER FUNCTIONS ---

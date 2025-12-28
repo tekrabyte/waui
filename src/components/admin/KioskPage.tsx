@@ -16,8 +16,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ShoppingCart, Plus, Minus, Trash2, Package, Box, Clock, CheckCircle2, XCircle, AlertCircle, ShoppingBag, Truck, QrCode, Building2, User, LogIn, Upload, X } from 'lucide-react';
 import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
-import { PaymentCategory, PaymentSubCategory, OrderStatus } from '../../types';
-import type { TransactionItem, PaymentMethod } from '../../types';
+import { PaymentCategory, PaymentSubCategory, OrderStatus } from '../../types/types';
+import type { TransactionItem, PaymentMethod } from '../../types/types';
 import type { GuestCustomerData } from '../../backend';
 import { toast } from 'sonner';
 

@@ -11,9 +11,9 @@ import { ShoppingCart, Plus, Minus, Trash2, CreditCard, Smartphone, Truck, Packa
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 // Pastikan path ini benar mengarah ke file types Anda
-import { PaymentCategory, PaymentSubCategory } from '../../types';
-import type { TransactionItem, PaymentMethod } from '../../types';
-import { calculatePackageStock } from '../lib/packageStockCalculator';
+import { PaymentCategory, PaymentSubCategory } from '../../types/types';
+import type { TransactionItem, PaymentMethod } from '../../types/types';
+import { calculatePackageStock } from '../../lib/packageStockCalculator';
 
 // --- HELPER CONSTANTS (SOLUSI UTAMA) ---
 // Kita buat object nyata agar bisa dipakai sebagai value di runtime
