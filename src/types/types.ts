@@ -84,7 +84,16 @@ export interface ProductPackage {
 
 export interface BundleItem {
   productId: string;
+  packageId?: string;
   quantity: number;
+  isPackage?: boolean;
+}
+
+export interface PackageComponent {
+  productId: bigint;
+  packageId: bigint;
+  quantity: bigint;
+  isPackage: boolean;
 }
 
 export interface Bundle {
