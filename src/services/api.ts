@@ -1,4 +1,4 @@
-import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Brand, Customer, Expense, CashflowSummary } from '../types/types';
+import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer, Expense, CashflowSummary } from '../types/types';
 const BASE_URL = 'https://erpos.tekrabyte.id/wp-json/posq/v1';
 
 // --- HELPER FUNCTIONS ---
@@ -354,14 +354,15 @@ export const api = {
       return data.map((e: any) => ({
         id: String(e.id),
         title: e.title,
-        amount: Number(e.amount),
+        amount: BigInt(e.amount),
         category: e.category,
-        date: Number(e.date || Date.now()),
+        date: BigInt(e.date || Date.now() * 1000000),
         note: e.note,
         outletId: e.outlet_id ? String(e.outlet_id) : undefined
       }));
     },
     create: async (data: any) => {
+      // Konversi BigInt ke number sebelum kirim JSON
       const payload = {
         ...data,
         amount: Number(data.amount),
@@ -419,20 +420,12 @@ export const api = {
       const data = await handleResponse(response);
       
       return {
-        totalIncome: Number(data.total_income || 0),
-        totalExpense: Number(data.total_expense || 0),
-        netProfit: Number(data.net_profit || 0),
+        totalIncome: BigInt(data.total_income || 0),
+        totalExpense: BigInt(data.total_expense || 0),
+        netProfit: BigInt(data.net_profit || 0),
         period: period,
         chartData: data.chart_data || []
       };
-    }
-  },
-  
-  // 13. BUNDLES
-  bundles: {
-    getAll: async () => {
-      const response = await fetch(`${BASE_URL}/bundles`, { headers: getAuthHeaders() });
-      return handleResponse(response);
     }
   }
   };
