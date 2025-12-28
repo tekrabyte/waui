@@ -183,6 +183,28 @@ export const useAddExpense = () => {
   });
 };
 
+export const useUpdateExpense = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.expenses.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      qc.invalidateQueries({ queryKey: ['cashflow'] });
+    },
+  });
+};
+
+export const useDeleteExpense = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.expenses.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      qc.invalidateQueries({ queryKey: ['cashflow'] });
+    },
+  });
+};
+
 export const useGetCashflowSummary = (period: 'daily' | 'weekly' | 'monthly', outletId?: string) =>
   useQuery({
     queryKey: ['cashflow', period, outletId],
