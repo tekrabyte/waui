@@ -201,14 +201,14 @@ function OwnerDashboard({ outlets }: { outlets: any[] }) {
   );
 }
 
-function OutletDashboard({ outletId }: { outletId: bigint }) {
-  const { data: outlet } = useGetOutlet(outletId);
-  const { data: dailySummary, isLoading: dailyLoading } = useGetDailySummaryOutlet(outletId);
-  const { data: overallSummary, isLoading: overallLoading } = useGetOverallSummaryOutlet(outletId);
-  const { data: bestSellers, isLoading: bestSellersLoading } = useGetBestSellers(outletId);
-  const { data: products } = useListProductsByOutlet(outletId);
+function OutletDashboard({ outletId }: { outletId: string }) {
+  const { data: outlet } = useGetOutlet(String(outletId));
+  const { data: dailySummary, isLoading: dailyLoading } = useGetDailySummaryOutlet(String(outletId));
+  const { data: overallSummary, isLoading: overallLoading } = useGetOverallSummaryOutlet(String(outletId));
+  const { data: bestSellers, isLoading: bestSellersLoading } = useGetBestSellers(String(outletId));
+  const { data: products } = useListProductsByOutlet(String(outletId));
 
-  const formatCurrency = (amount: bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -216,8 +216,8 @@ function OutletDashboard({ outletId }: { outletId: bigint }) {
     }).format(Number(amount));
   };
 
-  const getProductName = (productId: bigint) => {
-    const product = products?.find(p => p.id === productId);
+  const getProductName = (productId: string) => {
+    const product = products?.find(p => String(p.id) === String(productId));
     return product?.name || `Produk #${productId}`;
   };
 
