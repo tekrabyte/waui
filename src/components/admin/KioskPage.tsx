@@ -22,12 +22,12 @@ import type { GuestCustomerData } from '../../backend';
 import { toast } from 'sonner';
 
 interface CartItem {
-  id: bigint;
+  id: string;
   name: string;
-  price: bigint;
+  price: number;
   quantity: number;
   type: 'product' | 'package' | 'bundle';
-  availableStock: bigint;
+  availableStock: number;
 }
 
 interface GuestProfileData {
