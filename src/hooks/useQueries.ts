@@ -91,9 +91,8 @@ export const useGetOutlet = (id: string) =>
 export const useGetTopOutlets = () =>
   useQuery({
     queryKey: ['outlets', 'top'],
-    queryFn: async () => {
-      const res = await api.outlets.getAll();
-      return res.slice(0, 5); // Return top 5 outlets
+    queryFn: async (): Promise<Array<[string, number]>> => {
+      return await api.analytics.getTopOutlets();
     },
   });
 
