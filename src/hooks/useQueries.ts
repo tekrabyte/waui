@@ -109,6 +109,30 @@ export const useListProductsByOutlet = (outletId?: string) =>
     },
   });
 
+export const useAddProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.products.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+export const useUpdateProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.products.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+export const useDeleteProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.products.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
 /* =====================================================
    EXPENSE & CASHFLOW
 ===================================================== */
