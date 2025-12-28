@@ -83,7 +83,7 @@ function OwnerDashboard({ outlets }: { outlets: any[] }) {
             {topOutletsLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <p className="text-2xl font-bold">{formatCurrency(BigInt(totalRevenue))}</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
             )}
             <p className="text-xs text-muted-foreground mt-1">Semua outlet</p>
           </CardContent>
