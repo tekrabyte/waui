@@ -194,6 +194,24 @@ export const useListStaff = () =>
     },
   });
 
+export const useListAllUsers = () =>
+  useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const res = await api.staff.getAll();
+      return res.map((u: any) => ({
+        principal: { toString: () => String(u.id), toText: () => String(u.id) },
+        profile: {
+          id: String(u.id),
+          name: u.name,
+          email: u.email,
+          role: u.role as AppRole,
+          outletId: u.outletId,
+        },
+      }));
+    },
+  });
+
 export const useUpdateUserProfile = () => {
   const qc = useQueryClient();
   return useMutation({
