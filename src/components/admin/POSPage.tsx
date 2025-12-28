@@ -15,31 +15,14 @@ import { PaymentCategory, PaymentSubCategory } from '../../types/types';
 import type { TransactionItem, PaymentMethod } from '../../types/types';
 import { calculatePackageStock } from '../../lib/packageStockCalculator';
 
-// --- HELPER CONSTANTS (SOLUSI UTAMA) ---
-// Kita buat object nyata agar bisa dipakai sebagai value di runtime
-const PAYMENT_CATEGORIES = {
-  OFFLINE: { __kind__: 'offline' } as PaymentCategory,
-  ONLINE: { __kind__: 'online' } as PaymentCategory,
-  FOOD_DELIVERY: { __kind__: 'foodDelivery' } as PaymentCategory,
-};
-
-const PAYMENT_SUBCATEGORIES = {
-  E_WALLET: { __kind__: 'eWallet' } as PaymentSubCategory,
-  QRIS: { __kind__: 'qris' } as PaymentSubCategory,
-  SHOPEE_FOOD: { __kind__: 'shopeeFood' } as PaymentSubCategory,
-  GO_FOOD: { __kind__: 'goFood' } as PaymentSubCategory,
-  GRAB_FOOD: { __kind__: 'grabFood' } as PaymentSubCategory,
-};
-// ---------------------------------------
-
 interface CartItem {
   id: string;
   name: string;
-  price: bigint;
+  price: number;
   quantity: number;
   isPackage: boolean;
-  productId: bigint;
-  availableStock: bigint;
+  productId: string;
+  availableStock: number;
 }
 
 interface PaymentMethodInput {
