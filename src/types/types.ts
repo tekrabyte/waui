@@ -90,9 +90,9 @@ export interface BundleItem {
 }
 
 export interface PackageComponent {
-  productId: bigint;
-  packageId: bigint;
-  quantity: bigint;
+  productId: string;
+  packageId: string;
+  quantity: number;
   isPackage: boolean;
 }
 
