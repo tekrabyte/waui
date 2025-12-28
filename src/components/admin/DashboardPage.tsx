@@ -43,8 +43,10 @@ function OwnerDashboard({ outlets }: { outlets: any[] }) {
     }).format(Number(amount));
   };
 
-  // Calculate aggregated stats
-  const totalRevenue = topOutlets?.reduce((sum, [_, revenue]) => sum + Number(revenue), 0) || 0;
+  // Calculate aggregated stats - Fixed to handle array of tuples
+  const totalRevenue = Array.isArray(topOutlets) 
+    ? topOutlets.reduce((sum, [_, revenue]) => sum + Number(revenue), 0) 
+    : 0;
   const activeOutlets = outlets.filter(o => o.isActive).length;
 
   const getOutletName = (outletId: string) => {
