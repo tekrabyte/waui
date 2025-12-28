@@ -280,5 +280,79 @@ export const useGetAllBrands = () =>
     queryFn: (): Promise<Brand[]> => api.brands.getAll(),
   });
 
+/* =====================================================
+   INVENTORY / STOCK
+===================================================== */
+
+export const useListActivePackages = (outletId?: string | null) =>
+  useQuery({
+    queryKey: ['packages', outletId],
+    queryFn: async (): Promise<ProductPackage[]> => {
+      const res = await api.packages.getAll();
+      return res
+        .filter((p: any) => !outletId || p.outletId === outletId)
+        .map((p: any) => ({
+          id: String(p.id),
+          name: p.name,
+          price: Number(p.price),
+          items: p.items ?? [],
+          isActive: !!p.isActive,
+        }));
+    },
+  });
+
+export const useAddStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, quantity }: { productId: string; quantity: number }) =>
+      api.inventory.update(productId, quantity, 'add'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['packages'] });
+    },
+  });
+};
+
+export const useReduceStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, quantity }: { productId: string; quantity: number }) =>
+      api.inventory.update(productId, quantity, 'reduce'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['packages'] });
+    },
+  });
+};
+
+export const useTransferStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, quantity, targetOutletId }: { productId: string; quantity: number; targetOutletId: string }) =>
+      api.inventory.update(productId, quantity, 'reduce'), // Simplified for now
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['packages'] });
+    },
+  });
+};
+
+/* =====================================================
+   SETTINGS
+===================================================== */
+
+export const useGetMenuAccessConfig = () =>
+  useQuery({
+    queryKey: ['menuAccess'],
+    queryFn: () => api.settings.getMenuAccess(),
+  });
+
+export const useSaveMenuAccessConfig = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (config: any) => api.settings.saveMenuAccess(config),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['menuAccess'] }),
+  });
+};
 
   
