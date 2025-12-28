@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, Users } from 'lucide-react';
-import { AppRole, UserProfile, Principal } from '../../types/types';
+import { AppRole, Staff } from '../../types/types';
 
 export default function StaffManagementPage() {
   const { data: users, isLoading } = useListAllUsers(); 
@@ -20,11 +20,13 @@ export default function StaffManagementPage() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<{ principal: Principal; profile: UserProfile } | null>(null);
+  
+  const [selectedUser, setSelectedUser] = useState<Staff | null>(null);
 
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState<AppRole>(AppRole.cashier);
   const [editOutletId, setEditOutletId] = useState<string>('none');
+  const [editEmail, setEditEmail] = useState('');
 
   // Clear outlet when role changes to owner
   useEffect(() => {
@@ -33,16 +35,17 @@ export default function StaffManagementPage() {
     }
   }, [editRole]);
 
-  const handleEditClick = (principal: Principal, profile: UserProfile) => {
-    setSelectedUser({ principal, profile });
-    setEditName(profile.name);
-    setEditRole(profile.role);
-    setEditOutletId(profile.outletId?.toString() || 'none');
+  const handleEditClick = (user: Staff) => {
+    setSelectedUser(user);
+    setEditName(user.name);
+    setEditEmail(user.email || '');
+    setEditRole((user.role as AppRole) || AppRole.cashier);
+    setEditOutletId(user.outletId ? String(user.outletId) : 'none');
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (principal: Principal, profile: UserProfile) => {
-    setSelectedUser({ principal, profile });
+  const handleDeleteClick = (user: Staff) => {
+    setSelectedUser(user);
     setDeleteDialogOpen(true);
   };
 
@@ -50,15 +53,16 @@ export default function StaffManagementPage() {
     e.preventDefault();
     if (!selectedUser || !editName.trim()) return;
 
-    const updatedProfile: UserProfile = {
+    const updatedData = {
+      id: selectedUser.id,
       name: editName.trim(),
+      email: editEmail,
       role: editRole,
-      outletId: editRole === AppRole.owner || editOutletId === 'none' ? undefined : BigInt(editOutletId),
-      registeredAt: 0n
+      outletId: editRole === AppRole.owner || editOutletId === 'none' ? null : editOutletId,
     };
 
     updateUserProfile.mutate(
-      { userId: selectedUser.principal, profile: updatedProfile },
+      updatedData,
       {
         onSuccess: () => {
           setEditDialogOpen(false);
@@ -74,7 +78,7 @@ export default function StaffManagementPage() {
   const handleDeleteConfirm = () => {
     if (!selectedUser) return;
 
-    removeUser.mutate(selectedUser.principal, {
+    removeUser.mutate(selectedUser.id, {
       onSuccess: () => {
         setDeleteDialogOpen(false);
         setSelectedUser(null);
@@ -82,7 +86,7 @@ export default function StaffManagementPage() {
     });
   };
 
-  const getRoleBadge = (role: AppRole) => {
+  const getRoleBadge = (role: string) => {
     if (role === AppRole.owner) {
       return <Badge variant="default">Owner</Badge>;
     } else if (role === AppRole.manager) {
@@ -90,12 +94,12 @@ export default function StaffManagementPage() {
     } else if (role === AppRole.cashier) {
       return <Badge variant="outline">Kasir</Badge>;
     }
-    return <Badge variant="outline">Unknown</Badge>;
+    return <Badge variant="outline">{role}</Badge>;
   };
 
-  const getOutletName = (outletId?: bigint) => {
-    if (!outletId || !outlets) return '-';
-    const outlet = outlets.find((o) => o.id === outletId);
+  const getOutletName = (outletId?: string) => {
+    if (!outletId || outletId === 'none' || !outlets) return '-';
+    const outlet = outlets.find((o) => String(o.id) === String(outletId));
     return outlet ? outlet.name : '-';
   };
 
@@ -145,27 +149,26 @@ export default function StaffManagementPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nama</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Outlet</TableHead>
-                    <TableHead>Principal ID</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map(([principal, profile]) => (
-                    <TableRow key={principal.toString()}>
-                      <TableCell className="font-medium">{profile.name}</TableCell>
-                      <TableCell>{getRoleBadge(profile.role)}</TableCell>
-                      <TableCell>{getOutletName(profile.outletId)}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {principal.toString().slice(0, 20)}...
-                      </TableCell>
+                  {/* Added fallback key using index to prevent unique key warning if IDs are duplicated */}
+                  {users.map((user, index) => (
+                    <TableRow key={user.id ? String(user.id) : `user-${index}`}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>{getOutletName(user.outletId)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEditClick(principal, profile)}
+                            onClick={() => handleEditClick(user)}
                             title="Edit staf"
                           >
                             <Pencil className="h-4 w-4" />
@@ -173,7 +176,7 @@ export default function StaffManagementPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteClick(principal, profile)}
+                            onClick={() => handleDeleteClick(user)}
                             title="Hapus staf"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -206,6 +209,19 @@ export default function StaffManagementPage() {
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Masukkan nama"
+                required
+                disabled={updateUserProfile.isPending}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="email@example.com"
                 required
                 disabled={updateUserProfile.isPending}
               />
@@ -243,7 +259,7 @@ export default function StaffManagementPage() {
                   <SelectContent>
                     <SelectItem value="none">Tidak ada</SelectItem>
                     {outlets && outlets.map((outlet) => (
-                      <SelectItem key={outlet.id.toString()} value={outlet.id.toString()}>
+                      <SelectItem key={String(outlet.id)} value={String(outlet.id)}>
                         {outlet.name}
                       </SelectItem>
                     ))}
@@ -286,7 +302,7 @@ export default function StaffManagementPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Staf</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus staf <strong>{selectedUser?.profile.name}</strong>?
+              Apakah Anda yakin ingin menghapus staf <strong>{selectedUser?.name}</strong>?
               Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>

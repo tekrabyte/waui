@@ -323,10 +323,10 @@ export const useGetAllCustomers = () =>
     },
   });
 
-export const useListStaff = () =>
+export const useListAllUsers = () =>
   useQuery({
-    queryKey: ['staff'],
-    queryFn: async (): Promise<UserProfile[]> => {
+    queryKey: ['cashier'],
+    queryFn: async (): Promise<Staff[]> => {
       const res = await api.staff.getAll();
       return res.map((u: any) => ({
         id: String(u.id),
@@ -334,24 +334,8 @@ export const useListStaff = () =>
         email: u.email,
         role: u.role as AppRole,
         outletId: u.outletId,
-      }));
-    },
-  });
-
-export const useListAllUsers = () =>
-  useQuery({
-    queryKey: ['staff'],
-    queryFn: async () => {
-      const res = await api.staff.getAll();
-      return res.map((u: any) => ({
-        principal: { toString: () => String(u.id), toText: () => String(u.id) },
-        profile: {
-          id: String(u.id),
-          name: u.name,
-          email: u.email,
-          role: u.role as AppRole,
-          outletId: u.outletId,
-        },
+        status: u.status || 'active',
+        avatar: u.avatar
       }));
     },
   });
@@ -359,7 +343,8 @@ export const useListAllUsers = () =>
 export const useUpdateUserProfile = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: Partial<UserProfile> & { id: string }) =>
+    // Using 'any' for data to allow flexible updates (name, role, outletId)
+    mutationFn: ({ id, ...data }: any) =>
       api.staff.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
   });

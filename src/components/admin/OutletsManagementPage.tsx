@@ -89,12 +89,32 @@ export default function OutletsManagementPage() {
     );
   };
 
-  const formatDate = (timestamp: bigint) => {
-    return new Date(Number(timestamp / BigInt(1000000))).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  // FIXED: Handle String, Number, or BigInt gracefully
+  const formatDate = (dateValue: string | number |   undefined) => {
+    if (!dateValue) return '-';
+
+    try {
+      let date: Date;
+
+      if (typeof dateValue === 'number') {
+        // Assume nanoseconds if BigInt (Legacy ICP)
+        date = new Date(Number(dateValue));
+      } else {
+        // Strings ("2024-01-01") or Numbers (timestamps)
+        date = new Date(dateValue);
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) return '-';
+
+      return date.toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (e) {
+      return '-';
+    }
   };
 
   return (
