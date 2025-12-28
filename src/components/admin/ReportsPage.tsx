@@ -1,93 +1,114 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../services/api';
+import { useListAllTransactions, useListMyTransactions, useGetCallerUserProfile, useIsCallerAdmin } from '../hooks/useQueries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { FileText } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import type { Transaction } from '../types';
 
 export default function ReportsPage() {
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: userProfile } = useGetCallerUserProfile();
+  const { data: isAdmin } = useIsCallerAdmin();
+  const { data: allTransactions, isLoading: allLoading } = useListAllTransactions();
+  const { data: myTransactions, isLoading: myLoading } = useListMyTransactions();
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
+  const isOwner = isAdmin;
+  const transactions: Transaction[] | undefined = isOwner ? allTransactions : myTransactions;
+  const isLoading = isOwner ? allLoading : myLoading;
 
-  const loadTransactions = async () => {
-    try {
-      setIsLoading(true);
-      // Asumsi ada endpoint transactions
-      const data = await api.transactions?.getAll() || []; 
-      setTransactions(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+  const formatCurrency = (amount: bigint) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(Number(amount));
+  };
+
+  const formatDate = (timestamp: bigint) => {
+    return new Date(Number(timestamp / BigInt(1000000))).toLocaleString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getPaymentMethodsDisplay = (transaction: Transaction) => {
+    if (!transaction.paymentMethods || transaction.paymentMethods.length === 0) {
+      return '-';
     }
+    return transaction.paymentMethods.map(pm => pm.methodName).join(', ');
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('id-ID');
-  };
-
-  if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Laporan Transaksi</h1>
-        <p className="text-muted-foreground">Riwayat penjualan di semua outlet</p>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {isOwner ? 'Laporan Penjualan' : 'Transaksi Saya'}
+        </h1>
+        <p className="text-muted-foreground">
+          {isOwner ? 'Lihat semua transaksi penjualan' : 'Riwayat transaksi Anda'}
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" /> Riwayat Transaksi
-          </CardTitle>
-          <CardDescription>Menampilkan {transactions.length} transaksi terakhir</CardDescription>
+          <CardTitle>Daftar Transaksi</CardTitle>
+          <CardDescription>
+            {isOwner ? 'Semua transaksi di semua outlet' : 'Transaksi yang Anda buat'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8">Belum ada transaksi</TableCell></TableRow>
-                ) : (
-                  transactions.map((trx) => (
-                    <TableRow key={trx.id}>
-                      <TableCell className="font-medium">#{trx.id}</TableCell>
-                      <TableCell>{formatDate(trx.created_at || new Date().toISOString())}</TableCell>
-                      <TableCell>{trx.items_count || 1} item</TableCell>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !transactions || transactions.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">Belum ada transaksi</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Transaksi akan muncul di sini setelah dibuat
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Outlet</TableHead>
+                    <TableHead>Jumlah Item</TableHead>
+                    <TableHead>Metode Pembayaran</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id.toString()}>
+                      <TableCell className="font-medium">#{transaction.id.toString()}</TableCell>
+                      <TableCell>{formatDate(transaction.timestamp)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          {trx.status || 'Selesai'}
-                        </Badge>
+                        <Badge variant="outline">Outlet #{transaction.outletId.toString()}</Badge>
                       </TableCell>
+                      <TableCell>{transaction.items.length} item</TableCell>
+                      <TableCell>{getPaymentMethodsDisplay(transaction)}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(trx.total || 0)}
+                        {formatCurrency(transaction.total)}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+

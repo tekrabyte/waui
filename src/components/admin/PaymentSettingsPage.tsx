@@ -3,7 +3,7 @@ import { PaymentMethod } from '../../types';
 import { api } from '../../services/api';
 import { CreditCard, Smartphone, Banknote, QrCode } from 'lucide-react';
 
-export function PaymentSettingsPage() {
+export default function PaymentSettingsPage() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

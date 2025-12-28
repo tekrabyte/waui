@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../services/api'; // Pastikan path ini sesuai
-import { Staff } from '../../types'; // Pastikan tipe Staff ada
+import { useListAllUsers, useUpdateUserProfile, useRemoveUser, useListOutlets } from '../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,149 +9,93 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, Users, Plus } from 'lucide-react';
-import { toast } from 'sonner'; // Asumsi Anda pakai sonner seperti file lain
-
-// Mapping Role agar sesuai dengan UI Anda
-const AppRole = {
-  owner: 'owner',
-  manager: 'manager',
-  cashier: 'cashier',
-  admin: 'admin'
-};
+import { Pencil, Trash2, Users } from 'lucide-react';
+import { AppRole, UserProfile, Principal } from '../../backend';
 
 export default function StaffManagementPage() {
-  const [users, setUsers] = useState<Staff[]>([]);
-  const [outlets, setOutlets] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: users, isLoading } = useListAllUsers();
+  const { data: outlets } = useListOutlets();
+  const updateUserProfile = useUpdateUserProfile();
+  const removeUser = useRemoveUser();
 
-  // Dialog States
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false); 
-  const [selectedUser, setSelectedUser] = useState<Staff | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ principal: Principal; profile: UserProfile } | null>(null);
 
-  // Form States
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'cashier',
-    outletId: 'none'
-  });
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState<AppRole>(AppRole.cashier);
+  const [editOutletId, setEditOutletId] = useState<string>('none');
 
-  // Load Data
+  // Clear outlet when role changes to owner
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [usersData, outletsData] = await Promise.all([
-        api.staff.getAll(),
-        api.outlets.getAll()
-      ]);
-      setUsers(usersData);
-      setOutlets(outletsData);
-    } catch (err) {
-      console.error("Gagal memuat data:", err);
-      toast.error("Gagal memuat data staf");
-    } finally {
-      setIsLoading(false);
+    if (editRole === AppRole.owner) {
+      setEditOutletId('none');
     }
-  };
+  }, [editRole]);
 
-  const resetForm = () => {
-    setFormData({ name: '', email: '', password: '', role: 'cashier', outletId: 'none' });
-  };
-
-  const handleCreateClick = () => {
-    resetForm();
-    setCreateDialogOpen(true);
-  };
-
-  const handleEditClick = (user: Staff) => {
-    setSelectedUser(user);
-    setFormData({
-      name: user.name,
-      email: user.email,
-      password: '', // Password kosong saat edit (opsional)
-      role: user.role,
-      outletId: user.outletId || 'none'
-    });
+  const handleEditClick = (principal: Principal, profile: UserProfile) => {
+    setSelectedUser({ principal, profile });
+    setEditName(profile.name);
+    setEditRole(profile.role);
+    setEditOutletId(profile.outletId?.toString() || 'none');
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (user: Staff) => {
-    setSelectedUser(user);
+  const handleDeleteClick = (principal: Principal, profile: UserProfile) => {
+    setSelectedUser({ principal, profile });
     setDeleteDialogOpen(true);
   };
 
-  // --- ACTIONS ---
-
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await api.staff.create({
-        ...formData,
-        outletId: formData.outletId === 'none' ? undefined : formData.outletId
-      });
-      await loadData();
-      setCreateDialogOpen(false);
-      toast.success("Staf berhasil dibuat");
-    } catch (err) {
-      toast.error("Gagal membuat staf");
-    } finally {
-      setIsSubmitting(false);
-    }
+    if (!selectedUser || !editName.trim()) return;
+
+    const updatedProfile: UserProfile = {
+      name: editName.trim(),
+      role: editRole,
+      outletId: editRole === AppRole.owner || editOutletId === 'none' ? undefined : BigInt(editOutletId),
+      registeredAt: 0n
+    };
+
+    updateUserProfile.mutate(
+      { userId: selectedUser.principal, profile: updatedProfile },
+      {
+        onSuccess: () => {
+          setEditDialogOpen(false);
+          setSelectedUser(null);
+          setEditName('');
+          setEditRole(AppRole.cashier);
+          setEditOutletId('none');
+        },
+      }
+    );
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDeleteConfirm = () => {
     if (!selectedUser) return;
-    setIsSubmitting(true);
-    try {
-      // Logic update (simulasi jika api.staff.update belum ada, gunakan create atau endpoint khusus)
-      // await api.staff.update(selectedUser.id, formData); 
-      alert("API Update belum diimplementasikan di api.ts, logika UI sudah siap.");
-      // await loadData();
-      setEditDialogOpen(false);
-    } catch (err) {
-      toast.error("Gagal mengupdate staf");
-    } finally {
-      setIsSubmitting(false);
+
+    removeUser.mutate(selectedUser.principal, {
+      onSuccess: () => {
+        setDeleteDialogOpen(false);
+        setSelectedUser(null);
+      },
+    });
+  };
+
+  const getRoleBadge = (role: AppRole) => {
+    if (role === AppRole.owner) {
+      return <Badge variant="default">Owner</Badge>;
+    } else if (role === AppRole.manager) {
+      return <Badge variant="secondary">Manager</Badge>;
+    } else if (role === AppRole.cashier) {
+      return <Badge variant="outline">Kasir</Badge>;
     }
+    return <Badge variant="outline">Unknown</Badge>;
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!selectedUser) return;
-    setIsSubmitting(true);
-    try {
-      await api.staff.delete(selectedUser.id);
-      await loadData();
-      setDeleteDialogOpen(false);
-      toast.success("Staf berhasil dihapus");
-    } catch (err) {
-      toast.error("Gagal menghapus staf");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // --- RENDERING HELPERS ---
-
-  const getRoleBadge = (role: string) => {
-    if (role === AppRole.owner || role === 'administrator') return <Badge variant="default">Owner</Badge>;
-    if (role === AppRole.manager) return <Badge variant="secondary">Manager</Badge>;
-    return <Badge variant="outline">Kasir</Badge>;
-  };
-
-  const getOutletName = (outletId?: string) => {
-    if (!outletId || outletId === 'all' || outletId === 'none') return '-';
-    const outlet = outlets.find((o) => String(o.id) === String(outletId));
+  const getOutletName = (outletId?: bigint) => {
+    if (!outletId || !outlets) return '-';
+    const outlet = outlets.find((o) => o.id === outletId);
     return outlet ? outlet.name : '-';
   };
 
@@ -174,9 +117,6 @@ export default function StaffManagementPage() {
           <h1 className="text-3xl font-bold tracking-tight">Manajemen Staf</h1>
           <p className="text-muted-foreground">Kelola pengguna dan hak akses mereka</p>
         </div>
-        <Button onClick={handleCreateClick} className="bg-[#008069] hover:bg-[#006a57]">
-            <Plus className="mr-2 h-4 w-4" /> Tambah Staf
-        </Button>
       </div>
 
       <Card>
@@ -188,7 +128,7 @@ export default function StaffManagementPage() {
                 Daftar Staf
               </CardTitle>
               <CardDescription>
-                Total {users.length} pengguna terdaftar
+                Total {users?.length || 0} pengguna terdaftar
               </CardDescription>
             </div>
           </div>
@@ -205,25 +145,27 @@ export default function StaffManagementPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Outlet</TableHead>
+                    <TableHead>Principal ID</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell>{getOutletName(user.outletId)}</TableCell>
+                  {users.map(([principal, profile]) => (
+                    <TableRow key={principal.toString()}>
+                      <TableCell className="font-medium">{profile.name}</TableCell>
+                      <TableCell>{getRoleBadge(profile.role)}</TableCell>
+                      <TableCell>{getOutletName(profile.outletId)}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {principal.toString().slice(0, 20)}...
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEditClick(user)}
+                            onClick={() => handleEditClick(principal, profile)}
                             title="Edit staf"
                           >
                             <Pencil className="h-4 w-4" />
@@ -231,7 +173,7 @@ export default function StaffManagementPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteClick(user)}
+                            onClick={() => handleDeleteClick(principal, profile)}
                             title="Hapus staf"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -247,58 +189,7 @@ export default function StaffManagementPage() {
         </CardContent>
       </Card>
 
-      {/* CREATE DIALOG (Ditambahkan karena di file asli tidak ada fitur create user baru secara eksplisit di UI) */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Staf Baru</DialogTitle>
-            <DialogDescription>Buat akun baru untuk karyawan.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateSubmit} className="space-y-4">
-             <div className="space-y-2">
-              <Label>Nama Lengkap</Label>
-              <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Password</Label>
-              <Input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="cashier">Kasir</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label>Outlet</Label>
-                    <Select value={formData.outletId} onValueChange={(val) => setFormData({...formData, outletId: val})}>
-                        <SelectTrigger><SelectValue placeholder="Pilih Outlet" /></SelectTrigger>
-                        <SelectContent>
-                            {outlets.map(o => (
-                                <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={isSubmitting}>Simpan</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* EDIT DIALOG */}
+      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -312,17 +203,20 @@ export default function StaffManagementPage() {
               <Label htmlFor="edit-name">Nama Lengkap</Label>
               <Input
                 id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Masukkan nama"
                 required
+                disabled={updateUserProfile.isPending}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="edit-role">Role</Label>
               <Select 
-                value={formData.role} 
-                onValueChange={(value) => setFormData({...formData, role: value})}
+                value={editRole} 
+                onValueChange={(value) => setEditRole(value as AppRole)}
+                disabled={updateUserProfile.isPending}
               >
                 <SelectTrigger id="edit-role">
                   <SelectValue placeholder="Pilih role" />
@@ -335,12 +229,13 @@ export default function StaffManagementPage() {
               </Select>
             </div>
 
-            {(formData.role === AppRole.manager || formData.role === AppRole.cashier) && (
+            {(editRole === AppRole.manager || editRole === AppRole.cashier) && (
               <div className="space-y-2">
                 <Label htmlFor="edit-outlet">Outlet</Label>
                 <Select 
-                  value={formData.outletId} 
-                  onValueChange={(val) => setFormData({...formData, outletId: val})}
+                  value={editOutletId} 
+                  onValueChange={setEditOutletId}
+                  disabled={updateUserProfile.isPending}
                 >
                   <SelectTrigger id="edit-outlet">
                     <SelectValue placeholder="Pilih outlet" />
@@ -348,40 +243,61 @@ export default function StaffManagementPage() {
                   <SelectContent>
                     <SelectItem value="none">Tidak ada</SelectItem>
                     {outlets && outlets.map((outlet) => (
-                      <SelectItem key={outlet.id} value={String(outlet.id)}>
+                      <SelectItem key={outlet.id.toString()} value={outlet.id.toString()}>
                         {outlet.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Pilih outlet yang akan dikelola oleh staf ini
+                </p>
+              </div>
+            )}
+
+            {editRole === AppRole.owner && (
+              <div className="rounded-md bg-muted p-3">
+                <p className="text-sm text-muted-foreground">
+                  Owner memiliki akses ke semua outlet dan tidak perlu assignment outlet spesifik.
+                </p>
               </div>
             )}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={isSubmitting}>Simpan Perubahan</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                disabled={updateUserProfile.isPending}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={updateUserProfile.isPending}>
+                {updateUserProfile.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* DELETE DIALOG */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Staf</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus staf <strong>{selectedUser?.name}</strong>?
+              Apakah Anda yakin ingin menghapus staf <strong>{selectedUser?.profile.name}</strong>?
+              Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={removeUser.isPending}>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isSubmitting}
+              disabled={removeUser.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isSubmitting ? 'Menghapus...' : 'Hapus'}
+              {removeUser.isPending ? 'Menghapus...' : 'Hapus'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

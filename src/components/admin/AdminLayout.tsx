@@ -2,21 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Store, Users, Package, BarChart3, CreditCard, Settings, LogOut, Menu, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Import komponen-komponen yang sudah kita update
-import { Dashboard } from './Dashboard';
-import { OutletManagement } from './OutletsManagementPage';
-import { StaffManagement } from './StaffManagementPage';
-// (Pastikan komponen lain seperti ProductManagement juga diupdate dengan pola serupa)
-// import { ProductManagement } from './ProductManagement'; 
-
 interface AdminLayoutProps {
-  children?: React.ReactNode; // Optional karena kita handle render page internal
+  children: React.ReactNode; // Wajib menerima children
   activePage: string;
   onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
-export function AdminLayout({ activePage, onNavigate, onLogout }: AdminLayoutProps) {
+export function AdminLayout({ children, activePage, onNavigate, onLogout }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [user, setUser] = useState<any>(null);
 
@@ -24,18 +17,6 @@ export function AdminLayout({ activePage, onNavigate, onLogout }: AdminLayoutPro
     const u = localStorage.getItem('posq_user');
     if(u) setUser(JSON.parse(u));
   }, []);
-
-  const renderContent = () => {
-    switch(activePage) {
-      case 'dashboard': return <Dashboard />;
-      case 'outlets': return <OutletManagement />;
-      case 'staff': return <StaffManagement />;
-      // case 'products': return <ProductManagement />; // Perlu diupdate serupa
-      // case 'inventory': return <InventoryManagement />;
-      // case 'payments': return <PaymentSettings />;
-      default: return <div className="p-6">Halaman {activePage} sedang dalam pengembangan.</div>;
-    }
-  };
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -49,7 +30,7 @@ export function AdminLayout({ activePage, onNavigate, onLogout }: AdminLayoutPro
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
-      {/* Sidebar (Sama seperti sebelumnya) */}
+      {/* Sidebar */}
       <motion.aside 
         initial={false} 
         animate={{ width: isSidebarOpen ? 240 : 0, opacity: isSidebarOpen ? 1 : 0 }} 
@@ -94,8 +75,12 @@ export function AdminLayout({ activePage, onNavigate, onLogout }: AdminLayoutPro
             </div>
           </div>
         </header>
+        
+        {/* Disini kuncinya: Render children dari App.tsx */}
         <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">{renderContent()}</div>
+          <div className="max-w-7xl mx-auto">
+            {children} 
+          </div>
         </main>
       </div>
     </div>

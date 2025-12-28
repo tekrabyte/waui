@@ -16,7 +16,15 @@ export function InventoryManagement() {
     try {
       setIsLoading(true);
       const data = await api.inventory.getAll();
-      setInventory(data);
+      
+      // FIX: Map data API agar sesuai dengan tipe state (tambahkan productName)
+      const formattedData = data.map((item: any) => ({
+        ...item,
+        // Gunakan nama dari backend jika ada, atau fallback ke ID/Unknown
+        productName: item.productName || item.name || `Item ${item.productId}`
+      }));
+
+      setInventory(formattedData);
     } catch (err) {
       console.error('Failed to load inventory', err);
     } finally {
