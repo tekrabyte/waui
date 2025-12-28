@@ -250,6 +250,7 @@ export interface UserProfile {
   role: AppRole;
   email?: string;
   outletId?: string;
+  userId?: string;
   registeredAt?: number;
 }
 
