@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserCircle, TrendingUp, Users, ShoppingBag, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { OrderStatus } from '../../types';
+import { OrderStatus, Customer } from '../../types/types';
 import { useState } from 'react';
 
 export default function CustomerManagementPage() {
