@@ -68,6 +68,35 @@ export const useListOutlets = () =>
     },
   });
 
+export const useGetOutlet = (id: string) =>
+  useQuery({
+    queryKey: ['outlet', id],
+    queryFn: async (): Promise<Outlet> => {
+      const res = await api.outlets.getAll();
+      const outlet = res.find((o: any) => String(o.id) === id);
+      if (!outlet) throw new Error('Outlet not found');
+      return {
+        id: String(outlet.id),
+        name: outlet.name,
+        address: outlet.address,
+        phone: outlet.phone,
+        manager: outlet.manager,
+        isActive: outlet.status === 'active' || outlet.isActive === true,
+        createdAt: outlet.createdAt,
+      };
+    },
+    enabled: !!id,
+  });
+
+export const useGetTopOutlets = () =>
+  useQuery({
+    queryKey: ['outlets', 'top'],
+    queryFn: async () => {
+      const res = await api.outlets.getAll();
+      return res.slice(0, 5); // Return top 5 outlets
+    },
+  });
+
 export const useAddOutlet = () => {
   const qc = useQueryClient();
   return useMutation({
