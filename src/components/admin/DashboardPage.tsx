@@ -258,7 +258,7 @@ function OutletDashboard({ outletId }: { outletId: string }) {
             {dailyLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <p className="text-2xl font-bold">{formatCurrency(dailySummary?.totalRevenue || BigInt(0))}</p>
+              <p className="text-2xl font-bold">{formatCurrency(dailySummary?.totalRevenue || 0)}</p>
             )}
             <p className="text-xs text-muted-foreground mt-1">Total penjualan hari ini</p>
           </CardContent>
