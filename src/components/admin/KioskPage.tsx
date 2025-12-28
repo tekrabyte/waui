@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useGetCallerUserProfile, useListOutlets, useListProductsByOutlet, useListActivePackages, useListActiveBundles, useCreateTransaction, useGetUserTransactionHistory, useGetPaymentSettings, useUploadPaymentProof } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,10 +15,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ShoppingCart, Plus, Minus, Trash2, Package, Box, Clock, CheckCircle2, XCircle, AlertCircle, ShoppingBag, Truck, QrCode, Building2, User, LogIn, Upload, X } from 'lucide-react';
-import { calculatePackageStock, calculateBundleStock } from '../lib/packageStockCalculator';
-import { PaymentCategory, PaymentSubCategory, OrderStatus } from '../backend';
-import type { TransactionItem, PaymentMethod } from '../types';
-import type { GuestCustomerData } from '../backend';
+import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
+import { PaymentCategory, PaymentSubCategory, OrderStatus } from '../../types';
+import type { TransactionItem, PaymentMethod } from '../../types';
+import type { GuestCustomerData } from '../../backend';
 import { toast } from 'sonner';
 
 interface CartItem {

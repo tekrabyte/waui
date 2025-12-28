@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGetAllCategories, useCreateCategory, useUpdateCategory, useGetAllBrands, useCreateBrand, useUpdateBrand, useDeleteBrand, useIsCallerAdmin } from '../hooks/useQueries';
+import { useGetAllCategories, useCreateCategory, useUpdateCategory, useGetAllBrands, useCreateBrand, useUpdateBrand, useDeleteBrand, useIsCallerAdmin } from '../../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ import { Plus, Pencil, Trash2, Tag, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import type { Category, Brand } from '../types/backend';
+import type { Category, Brand } from '../../types';
 
 export default function CategoryBrandPage() {
   const { data: isAdmin } = useIsCallerAdmin();

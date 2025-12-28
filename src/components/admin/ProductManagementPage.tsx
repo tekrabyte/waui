@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useListProductsByOutlet, useAddProduct, useUpdateProduct, useDeleteProduct, useGetCallerUserProfile, useIsCallerAdmin, useListOutlets, useGetAllCategories, useGetAllBrands, useListActivePackages, useCreatePackage, useUpdatePackage, useMarkPackageInactive, useListActiveBundles, useCreateBundle, useUpdateBundle, useMarkBundleInactive } from '../hooks/useQueries';
+import { useListProductsByOutlet, useAddProduct, useUpdateProduct, useDeleteProduct, useGetCallerUserProfile, useIsCallerAdmin, useListOutlets, useGetAllCategories, useGetAllBrands, useListActivePackages, useCreatePackage, useUpdatePackage, useMarkPackageInactive, useListActiveBundles, useCreateBundle, useUpdateBundle, useMarkBundleInactive } from '../../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,8 +30,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Product, ProductPackage, PackageComponent, Bundle, BundleItem } from '../types/backend';
-import { calculatePackageStock, calculateBundleStock } from '../lib/packageStockCalculator';
+import type { Product, ProductPackage, PackageComponent, Bundle, BundleItem } from '../../types';
+import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
 
 interface ComponentInput {
   productId: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useIsCallerAdmin, useGetMenuAccessConfig, useSaveMenuAccessConfig } from '../hooks/useQueries';
+import { useIsCallerAdmin, useGetMenuAccessConfig, useSaveMenuAccessConfig } from "../../hooks/useQueries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Settings, AlertCircle, RotateCcw } from 'lucide-react';
-import type { MenuAccess } from 'backend';
+import type { MenuAccess } from '../../types';
 
 interface MenuAccessState {
   manager: MenuAccess[];

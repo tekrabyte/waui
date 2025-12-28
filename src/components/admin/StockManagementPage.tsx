@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useListProductsByOutlet, useListActivePackages, useAddStock, useReduceStock, useTransferStock, useGetCallerUserProfile, useIsCallerAdmin, useListOutlets } from '../hooks/useQueries';
+import { useListProductsByOutlet, useListActivePackages, useAddStock, useReduceStock, useTransferStock, useGetCallerUserProfile, useIsCallerAdmin, useListOutlets } from '../../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,8 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Minus, ArrowRightLeft, PackageOpen, Eye, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import type { Product } from '../types/backend';
-import { calculatePackageStock } from '../lib/packageStockCalculator';
+import type { Product } from '../../types';
+import { calculatePackageStock } from '../../lib/packageStockCalculator';
 
 type StockAction = 'add' | 'reduce' | 'transfer';
 

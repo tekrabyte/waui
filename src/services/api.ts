@@ -1,4 +1,4 @@
-import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer, MenuAccessConfig } from '../types';
+import { Product, Staff, Outlet, InventoryItem, PaymentMethod, Category, Customer, Expense, CashflowSummary } from '../../types';
 const BASE_URL = 'https://erpos.tekrabyte.id/wp-json/posq/v1';
 
 // --- HELPER FUNCTIONS ---
@@ -72,7 +72,6 @@ export const api = {
       return handleResponse(response);
     },
     update: async (id: string, staffData: any) => {
-      // Mapping frontend camelCase to backend snake_case
       const payload: any = { id };
       if (staffData.name) payload.name = staffData.name;
       if (staffData.email) payload.email = staffData.email;
@@ -148,7 +147,6 @@ export const api = {
         image: item.image_url,
         available: item.is_active !== false,
         description: item.description,
-        // Tambahan field untuk manajemen stok jika backend support
         stock: Number(item.stock || 0), 
         outletId: item.outlet_id ? String(item.outlet_id) : undefined
       }));
@@ -178,7 +176,15 @@ export const api = {
     }
   },
 
-  // 5. INVENTORY
+  // 5. PACKAGES (New)
+  packages: {
+    getAll: async () => {
+      const response = await fetch(`${BASE_URL}/packages`, { headers: getAuthHeaders() });
+      return handleResponse(response);
+    }
+  },
+
+  // 6. INVENTORY
   inventory: {
     getAll: async (): Promise<InventoryItem[]> => {
       const response = await fetch(`${BASE_URL}/inventory`, { headers: getAuthHeaders() });
@@ -191,10 +197,8 @@ export const api = {
         lastUpdated: item.updated_at
       }));
     },
-    // Placeholder methods for stock actions (Add/Reduce/Transfer)
-    // Backend perlu implementasi spesifik atau gunakan update product
     update: async (productId: string, quantity: number, type: 'add' | 'reduce' | 'set') => {
-       const response = await fetch(`${BASE_URL}/inventory/update`, {
+      const response = await fetch(`${BASE_URL}/inventory/update`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ product_id: productId, quantity, type }),
@@ -203,7 +207,7 @@ export const api = {
     }
   },
 
-  // 6. PAYMENTS
+  // 7. PAYMENTS
   payments: {
     getAll: async (): Promise<PaymentMethod[]> => {
        const response = await fetch(`${BASE_URL}/payments`, { headers: getAuthHeaders() });
@@ -226,7 +230,7 @@ export const api = {
     }
   },
 
-  // 7. CATEGORIES & BRANDS
+  // 8. CATEGORIES & BRANDS
   categories: {
     getAll: async (): Promise<Category[]> => {
       const response = await fetch(`${BASE_URL}/categories`, { headers: getAuthHeaders() });
@@ -235,12 +239,22 @@ export const api = {
         id: String(c.id),
         name: c.name,
         icon: c.icon || 'Box',
-        count: c.count || 0
+        count: c.count || 0,
+        description: c.description,
+        isActive: c.is_active !== false // Default true
       }));
     },
     create: async (data: any) => {
       const response = await fetch(`${BASE_URL}/categories`, {
         method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      return handleResponse(response);
+    },
+    update: async (id: string, data: any) => {
+      const response = await fetch(`${BASE_URL}/categories/${id}`, {
+        method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data)
       });
@@ -256,13 +270,27 @@ export const api = {
   },
 
   brands: {
-    getAll: async () => {
+    getAll: async (): Promise<Brand[]> => {
       const response = await fetch(`${BASE_URL}/brands`, { headers: getAuthHeaders() });
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      return data.map((b: any) => ({
+        id: String(b.id),
+        name: b.name,
+        description: b.description,
+        isActive: b.is_active !== false
+      }));
     },
     create: async (data: any) => {
        const response = await fetch(`${BASE_URL}/brands`, {
         method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      return handleResponse(response);
+    },
+    update: async (id: string, data: any) => {
+      const response = await fetch(`${BASE_URL}/brands/${id}`, {
+        method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data)
       });
@@ -277,7 +305,7 @@ export const api = {
     }
   },
 
-  // 8. TRANSACTIONS / ORDERS (POS & Reports)
+  // 9. TRANSACTIONS / ORDERS
   transactions: {
     getAll: async () => {
       const response = await fetch(`${BASE_URL}/orders`, { headers: getAuthHeaders() });
@@ -301,15 +329,14 @@ export const api = {
     }
   },
 
-  
-settings: {
-    getMenuAccess: async (): Promise<MenuAccessConfig> => {
+  // 10. SETTINGS
+  settings: {
+    getMenuAccess: async (): Promise<any> => {
       const response = await fetch(`${BASE_URL}/settings/menu-access`, { headers: getAuthHeaders() });
-      // Fallback jika API belum siap, return null agar frontend pakai default
       if (response.status === 404) return null as any; 
       return handleResponse(response);
     },
-    saveMenuAccess: async (config: MenuAccessConfig) => {
+    saveMenuAccess: async (config: any) => {
       const response = await fetch(`${BASE_URL}/settings/menu-access`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -319,28 +346,86 @@ settings: {
     }
   },
 
-
-  // 9. EXPENSES / CASHFLOW
-  expenses: {
-    getAll: async () => {
-      const response = await fetch(`${BASE_URL}/expenses`, { headers: getAuthHeaders() });
-      return handleResponse(response);
+ expenses: {
+    getAll: async (outletId?: string): Promise<Expense[]> => {
+      const url = outletId ? `${BASE_URL}/expenses?outlet_id=${outletId}` : `${BASE_URL}/expenses`;
+      const response = await fetch(url, { headers: getAuthHeaders() });
+      const data = await handleResponse(response);
+      return data.map((e: any) => ({
+        id: String(e.id),
+        title: e.title,
+        amount: BigInt(e.amount),
+        category: e.category,
+        date: BigInt(e.date || Date.now() * 1000000),
+        note: e.note,
+        outletId: e.outlet_id ? String(e.outlet_id) : undefined
+      }));
     },
     create: async (data: any) => {
+      // Konversi BigInt ke number sebelum kirim JSON
+      const payload = {
+        ...data,
+        amount: Number(data.amount),
+        outlet_id: data.outletId
+      };
       const response = await fetch(`${BASE_URL}/expenses`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
+      });
+      return handleResponse(response);
+    },
+    update: async (id: string, data: any) => {
+      const payload = { ...data };
+      if (payload.amount) payload.amount = Number(payload.amount);
+      
+      const response = await fetch(`${BASE_URL}/expenses/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      return handleResponse(response);
+    },
+    delete: async (id: string) => {
+      const response = await fetch(`${BASE_URL}/expenses/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
       });
       return handleResponse(response);
     }
   },
 
-  // 10. CUSTOMERS
- customers: {
-    getAll: async () => {
+  // 12. CUSTOMERS
+  customers: {
+    getAll: async (): Promise<Customer[]> => {
       const response = await fetch(`${BASE_URL}/customers`, { headers: getAuthHeaders() });
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      return data.map((c: any) => ({
+        id: String(c.id),
+        name: c.name,
+        lastOrder: c.last_order_date || '-',
+        status: c.status || 'offline',
+        unread: 0
+      }));
     }
   },
-};
+
+  // 12. CASHFLOW / REPORTS
+  cashflow: {
+    getSummary: async (period: 'daily' | 'weekly' | 'monthly' = 'monthly', outletId?: string): Promise<CashflowSummary> => {
+      let url = `${BASE_URL}/reports/cashflow?period=${period}`;
+      if (outletId) url += `&outlet_id=${outletId}`;
+      
+      const response = await fetch(url, { headers: getAuthHeaders() });
+      const data = await handleResponse(response);
+      
+      return {
+        totalIncome: BigInt(data.total_income || 0),
+        totalExpense: BigInt(data.total_expense || 0),
+        netProfit: BigInt(data.net_profit || 0),
+        period: period,
+        chartData: data.chart_data || []
+      };
+    }
+  }
+  };

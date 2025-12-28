@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useGetExpenses, useGetCashflowSummary, useAddExpense, useUpdateExpense, useDeleteExpense, useListAllTransactions } from '../hooks/useQueries';
+import { useGetExpenses, useGetCashflowSummary, useAddExpense, useUpdateExpense, useDeleteExpense, useListAllTransactions } from '../../hooks/useQueries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

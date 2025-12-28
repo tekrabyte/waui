@@ -1,10 +1,10 @@
-import { useListAllTransactions, useListMyTransactions, useGetCallerUserProfile, useIsCallerAdmin } from '../hooks/useQueries';
+import { useListAllTransactions, useListMyTransactions, useGetCallerUserProfile, useIsCallerAdmin } from '../../hooks/useQueries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import type { Transaction } from '../types';
+import type { Transaction } from '../../types';
 
 export default function ReportsPage() {
   const { data: userProfile } = useGetCallerUserProfile();

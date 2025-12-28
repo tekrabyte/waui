@@ -1,4 +1,5 @@
 export interface Product {
+  stock: bigint;
   id: string;
   name: string;
   price: number;
@@ -7,6 +8,20 @@ export interface Product {
   available: boolean;
   description?: string;
 }
+
+export interface ProductPackage {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  available: boolean;
+  items: {
+    productId: string;
+    quantity: number;
+  }[];
+}
+
 export interface Category {
   id: string;
   name: string;

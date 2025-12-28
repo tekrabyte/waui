@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useListAllUsers, useUpdateUserProfile, useRemoveUser, useListOutlets } from '../hooks/useQueries';
+import { useListAllUsers, useUpdateUserProfile, useRemoveUser, useListOutlets } from '../../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, Users } from 'lucide-react';
-import { AppRole, UserProfile, Principal } from '../../backend';
+import { AppRole, UserProfile, Principal } from '../../types';
 
 export default function StaffManagementPage() {
-  const { data: users, isLoading } = useListAllUsers();
+  const { data: users, isLoading } = useListAllUsers(); 
   const { data: outlets } = useListOutlets();
   const updateUserProfile = useUpdateUserProfile();
   const removeUser = useRemoveUser();
