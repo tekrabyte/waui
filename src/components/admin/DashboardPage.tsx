@@ -241,7 +241,7 @@ function OutletDashboard({ outletId }: { outletId: string }) {
             {dailyLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <p className="text-2xl font-bold">{dailySummary?.transactionCount.toString() || '0'}</p>
+              <p className="text-2xl font-bold">{dailySummary?.transactionCount?.toString() || '0'}</p>
             )}
             <p className="text-xs text-muted-foreground mt-1">Transaksi dalam 24 jam terakhir</p>
           </CardContent>
