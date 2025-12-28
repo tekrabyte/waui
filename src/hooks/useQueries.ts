@@ -431,11 +431,51 @@ export const useGetAllCategories = () =>
     queryFn: (): Promise<Category[]> => api.categories.getAll(),
   });
 
+export const useCreateCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.categories.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+};
+
+export const useUpdateCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.categories.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+};
+
 export const useGetAllBrands = () =>
   useQuery({
     queryKey: ['brands'],
     queryFn: (): Promise<Brand[]> => api.brands.getAll(),
   });
+
+export const useCreateBrand = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.brands.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['brands'] }),
+  });
+};
+
+export const useUpdateBrand = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.brands.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['brands'] }),
+  });
+};
+
+export const useDeleteBrand = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.brands.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['brands'] }),
+  });
+};
 
 /* =====================================================
    INVENTORY / STOCK
