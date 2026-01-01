@@ -4,7 +4,7 @@ import { ProductGrid } from './components/ProductGrid';
 import { Cart } from './components/Cart';
 import { MobileLayout } from './components/MobileLayout';
 import { LoginPage } from './components/LoginPage';
-import { Category, Customer, Product, CartItem } from './types';
+import { Category, Customer, Product, CartItem } from './types/types';
 import { api } from './services/api';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -224,6 +224,7 @@ export function App() {
           {adminPage === 'cashflow' && <CashflowPage />}
           {adminPage === 'payments' && <PaymentSettingsPage />}
           {adminPage === 'settings' && <SettingsPage />}
+          {adminPage === 'categorybrand' && <CategoryBrandPage />}
         </AdminLayout>
       </>
     );

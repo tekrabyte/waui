@@ -25,7 +25,8 @@ export function AdminLayout({ children, activePage, onNavigate, onLogout }: Admi
     { id: 'products', label: 'Products', icon: Package },
     { id: 'inventory', label: 'Inventory', icon: BarChart3 },
     { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'settings', label: 'Settings', icon: Settings }
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'categorybrand', label: 'CategoryBrand', icon: Settings }
   ];
 
   return (
