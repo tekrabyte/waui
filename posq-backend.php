@@ -85,6 +85,7 @@ class posq_Backend {
             outlet_id bigint(20) UNSIGNED NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             is_active tinyint(1) DEFAULT 1,
+            image_url varchar(500),
             PRIMARY KEY (id)
         ) $charset_collate;";
         dbDelta($sql);
@@ -110,6 +111,7 @@ class posq_Backend {
             is_active tinyint(1) DEFAULT 1,
             manual_stock_enabled tinyint(1) DEFAULT 0,
             manual_stock bigint(20) NULL,
+            image_url varchar(500),
             PRIMARY KEY (id)
         ) $charset_collate;";
         dbDelta($sql);
@@ -527,6 +529,13 @@ class posq_Backend {
         register_rest_route($namespace, '/settings/role-menu-access', [
             'methods' => 'GET',
             'callback' => [self::class, 'get_role_menu_access'],
+            'permission_callback' => [self::class, 'check_auth']
+        ]);
+
+        // Image Upload
+        register_rest_route($namespace, '/upload-image', [
+            'methods' => 'POST',
+            'callback' => [self::class, 'upload_image'],
             'permission_callback' => [self::class, 'check_auth']
         ]);
     }
@@ -1210,7 +1219,8 @@ class posq_Backend {
                 'outlet_id' => (string) $package->outlet_id,
                 'components' => $items,
                 'created_at' => $package->created_at,
-                'is_active' => (bool) $package->is_active
+                'is_active' => (bool) $package->is_active,
+                'image_url' => $package->image_url ?? null
             ];
         }
         
@@ -1227,12 +1237,19 @@ class posq_Backend {
         global $wpdb;
         
         // Insert package
-        $wpdb->insert($wpdb->prefix . 'posq_packages', [
+        $insert_data = [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
             'outlet_id' => (int) $data['outletId'],
             'is_active' => 1
-        ]);
+        ];
+
+        // Add image_url if provided
+        if (!empty($data['image_url'])) {
+            $insert_data['image_url'] = esc_url_raw($data['image_url']);
+        }
+
+        $wpdb->insert($wpdb->prefix . 'posq_packages', $insert_data);
 
         $package_id = $wpdb->insert_id;
 
@@ -1258,6 +1275,7 @@ class posq_Backend {
         $update_data = [];
         if (!empty($data['name'])) $update_data['name'] = sanitize_text_field($data['name']);
         if (isset($data['price'])) $update_data['price'] = (int) $data['price'];
+        if (isset($data['image_url'])) $update_data['image_url'] = esc_url_raw($data['image_url']);
 
         if (!empty($update_data)) {
             $wpdb->update(
@@ -1341,6 +1359,7 @@ class posq_Backend {
                 // PERBAIKAN: Return manual stock fields
                 'manual_stock_enabled' => (bool) $bundle->manual_stock_enabled,
                 'manual_stock' => $bundle->manual_stock !== null ? (int) $bundle->manual_stock : null,
+                'image_url' => $bundle->image_url ?? null
             ];
         }
         
@@ -1364,15 +1383,22 @@ class posq_Backend {
             $manual_stock = (int) $data['manualStock'];
         }
         
-        // Insert bundle with manual stock fields
-        $wpdb->insert($wpdb->prefix . 'posq_bundles', [
+        // Insert bundle with manual stock fields and image_url
+        $insert_data = [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
             'outlet_id' => (int) $data['outletId'],
             'is_active' => 1,
             'manual_stock_enabled' => $manual_stock_enabled,
             'manual_stock' => $manual_stock
-        ]);
+        ];
+
+        // Add image_url if provided
+        if (!empty($data['image_url'])) {
+            $insert_data['image_url'] = esc_url_raw($data['image_url']);
+        }
+
+        $wpdb->insert($wpdb->prefix . 'posq_bundles', $insert_data);
 
         $bundle_id = $wpdb->insert_id;
 
