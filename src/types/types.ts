@@ -80,6 +80,8 @@ export interface ProductPackage {
   stock?: bigint;
   isActive?: boolean;
   outletId?: string;
+  manualStockEnabled?: boolean;
+  manualStock?: number;
 }
 
 export interface BundleItem {
@@ -106,6 +108,8 @@ export interface Bundle {
   description?: string;
   calculatedStock?: number;
   outletId?: string;
+  manualStockEnabled?: boolean;
+  manualStock?: number;
 }
 
 export interface Category {

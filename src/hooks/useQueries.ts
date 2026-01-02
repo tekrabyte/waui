@@ -233,24 +233,32 @@ export const useListPackages = () =>
 export const useCreatePackage = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => api.packages.getAll(), // Placeholder - need API endpoint
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+    mutationFn: (data: any) => api.packages.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['packages'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 };
 
 export const useUpdatePackage = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & any) => api.packages.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.packages.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['packages'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 };
 
 export const useMarkPackageInactive = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.packages.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+    mutationFn: (id: string) => api.packages.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['packages'] });
+    },
   });
 };
 
@@ -273,13 +281,17 @@ export const useListActiveBundles = (outletId?: string | null) =>
     queryFn: async (): Promise<Bundle[]> => {
       const res = await api.bundles.getAll();
       return res
-        .filter((b: any) => !outletId || b.outletId === outletId)
+        .filter((b: any) => !outletId || String(b.outletId) === String(outletId))
+        .filter((b: any) => b.active !== false && b.isActive !== false)
         .map((b: any) => ({
           id: String(b.id),
           name: b.name,
           price: Number(b.price),
           items: b.items ?? [],
-          active: !!b.active,
+          outletId: String(b.outletId || b.outlet_id),
+          active: b.active !== false && b.isActive !== false,
+          manualStockEnabled: b.manualStockEnabled || b.manual_stock_enabled || false,
+          manualStock: b.manualStock || b.manual_stock || undefined,
         }));
     },
   });
@@ -287,24 +299,32 @@ export const useListActiveBundles = (outletId?: string | null) =>
 export const useCreateBundle = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => api.bundles.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+    mutationFn: (data: any) => api.bundles.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bundles'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 };
 
 export const useUpdateBundle = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & any) => api.bundles.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.bundles.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bundles'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 };
 
 export const useMarkBundleInactive = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.bundles.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+    mutationFn: (id: string) => api.bundles.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bundles'] });
+    },
   });
 };
 
@@ -501,13 +521,19 @@ export const useListActivePackages = (outletId?: string | null) =>
     queryFn: async (): Promise<ProductPackage[]> => {
       const res = await api.packages.getAll();
       return res
-        .filter((p: any) => !outletId || p.outletId === outletId)
+        .filter((p: any) => !outletId || String(p.outletId) === String(outletId))
+        .filter((p: any) => p.isActive !== false && p.is_active !== false)
         .map((p: any) => ({
           id: String(p.id),
           name: p.name,
           price: Number(p.price),
-          items: p.items ?? [],
-          isActive: !!p.isActive,
+          components: p.components || p.items || [],
+          items: p.items || p.components || [],
+          outletId: String(p.outletId || p.outlet_id),
+          isActive: p.isActive !== false && p.is_active !== false,
+          manualStockEnabled: p.manualStockEnabled || p.manual_stock_enabled || false,
+          manualStock: p.manualStock || p.manual_stock || undefined,
+          available: true,
         }));
     },
   });

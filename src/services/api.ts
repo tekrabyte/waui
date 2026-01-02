@@ -221,7 +221,21 @@ export const api = {
   packages: {
     getAll: async (): Promise<Package[]> => {
       const response = await fetch(`${BASE_URL}/packages`, { headers: getAuthHeaders() });
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      // Map backend response (snake_case) to frontend format (camelCase)
+      return data.map((pkg: any) => ({
+        id: String(pkg.id),
+        name: pkg.name,
+        price: Number(pkg.price),
+        outletId: pkg.outlet_id ? String(pkg.outlet_id) : undefined,
+        components: (pkg.components || []).map((comp: any) => ({
+          productId: String(comp.product_id),
+          quantity: Number(comp.quantity),
+        })),
+        isActive: !!pkg.is_active,
+        available: !!pkg.is_active,
+        createdAt: pkg.created_at,
+      }));
     },
     create: async (data: any) => {
       const response = await fetch(`${BASE_URL}/packages`, {
@@ -252,7 +266,24 @@ export const api = {
   bundles: {
     getAll: async (): Promise<Bundle[]> => {
       const response = await fetch(`${BASE_URL}/bundles`, { headers: getAuthHeaders() });
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      // Map backend response (snake_case) to frontend format (camelCase)
+      return data.map((bundle: any) => ({
+        id: String(bundle.id),
+        name: bundle.name,
+        price: Number(bundle.price),
+        outletId: bundle.outlet_id ? String(bundle.outlet_id) : undefined,
+        items: (bundle.items || []).map((item: any) => ({
+          productId: item.product_id ? String(item.product_id) : undefined,
+          packageId: item.package_id ? String(item.package_id) : undefined,
+          quantity: Number(item.quantity),
+          isPackage: !!item.is_package,
+        })),
+        active: !!bundle.is_active,
+        isActive: !!bundle.is_active,
+        available: !!bundle.is_active,
+        createdAt: bundle.created_at,
+      }));
     },
     create: async (data: any) => {
       const response = await fetch(`${BASE_URL}/bundles`, {

@@ -1,6 +1,11 @@
 import { Product, ProductPackage, Bundle } from '../types/types';
 
 export function calculatePackageStock(pkg: ProductPackage, products: Product[]): bigint {
+  // Jika stok manual diaktifkan, gunakan stok manual
+  if (pkg.manualStockEnabled && pkg.manualStock !== undefined) {
+    return BigInt(pkg.manualStock);
+  }
+  
   const items = pkg.items || pkg.components || [];
   
   if (!items || items.length === 0) return 0n;
@@ -37,6 +42,11 @@ export function calculatePackageStock(pkg: ProductPackage, products: Product[]):
 }
 
 export function calculateBundleStock(bundle: Bundle, products: Product[], packages: ProductPackage[]): bigint {
+  // Jika stok manual diaktifkan, gunakan stok manual
+  if (bundle.manualStockEnabled && bundle.manualStock !== undefined) {
+    return BigInt(bundle.manualStock);
+  }
+  
   const items = bundle.items || [];
   if (items.length === 0) return 0n;
 
