@@ -496,7 +496,47 @@ export const api = {
       };
     }
   },
-
+// 14. CUSTOMERS (DIKEMBALIKAN)
+  customers: {
+    getAll: async (): Promise<Customer[]> => {
+      const response = await fetch(`${BASE_URL}/customers`, { headers: getAuthHeaders() });
+      const data = await handleResponse(response);
+      return data.map((c: any) => ({
+        id: String(c.id),
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        avatar: '', // Backend belum support avatar customer
+        lastOrder: '', // Perlu query tambahan jika ingin data ini
+        status: 'offline', // Default value
+        registeredAt: new Date(c.created_at).getTime()
+      }));
+    },
+    create: async (data: any) => {
+      const response = await fetch(`${BASE_URL}/customers`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      return handleResponse(response);
+    },
+    update: async (id: string, data: any) => {
+      const response = await fetch(`${BASE_URL}/customers/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      return handleResponse(response);
+    },
+    delete: async (id: string) => {
+      const response = await fetch(`${BASE_URL}/customers/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      return handleResponse(response);
+    }
+  },
   // 13. SETTINGS
   settings: {
     getMenuAccess: async (): Promise<any> => {

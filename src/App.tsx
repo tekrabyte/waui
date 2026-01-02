@@ -32,6 +32,7 @@ interface AuthState {
   } | null;
 }
 
+
 export function App() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);

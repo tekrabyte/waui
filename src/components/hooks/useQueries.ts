@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 import {
   Product,
   ProductPackage,
@@ -14,7 +14,7 @@ import {
   CashflowSummary,
   Category,
   Brand,
-} from '../types/types';
+} from '../../types/types';
 
 /* =====================================================
    AUTH
@@ -252,6 +252,31 @@ export const useMarkPackageInactive = () => {
   return useMutation({
     mutationFn: (id: string) => api.packages.getAll(), // Placeholder
     onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
+export const useCreateUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.staff.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
+  });
+};
+
+export const useUpdateUserProfile = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: Partial<UserProfile> & { id: string }) =>
+      api.staff.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
+  });
+};
+
+export const useRemoveUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.staff.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
   });
 };
 

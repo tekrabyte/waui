@@ -342,15 +342,15 @@ export const useListAllUsers = () =>
     queryKey: ['staff'],
     queryFn: async () => {
       const res = await api.staff.getAll();
+      
+      // PERBAIKAN: Langsung kembalikan array object flat (tidak dibungkus principal/profile)
+      // agar StaffManagementPage bisa membaca user.name, user.email, dll.
       return res.map((u: any) => ({
-        principal: { toString: () => String(u.id), toText: () => String(u.id) },
-        profile: {
-          id: String(u.id),
-          name: u.name,
-          email: u.email,
-          role: u.role as AppRole,
-          outletId: u.outletId,
-        },
+        id: String(u.id),
+        name: u.name,
+        email: u.email,
+        role: u.role as AppRole,
+        outletId: u.outletId,
       }));
     },
   });
@@ -644,4 +644,11 @@ export const useUploadPaymentProof = () => {
   });
 };
 
-  
+export const useCreateUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.staff.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
+  });
+};
+

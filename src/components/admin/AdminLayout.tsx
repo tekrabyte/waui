@@ -1,21 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Store, Users, Package, BarChart3, CreditCard, Settings, LogOut, Menu, X } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Store, 
+  Users, 
+  Package, 
+  BarChart3, 
+  CreditCard, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  X,
+  Tags // Icon baru untuk Category/Brand
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AdminLayoutProps {
-  children: React.ReactNode; // Wajib menerima children
+  children: React.ReactNode;
   activePage: string;
   onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
 export function AdminLayout({ children, activePage, onNavigate, onLogout }: AdminLayoutProps) {
+  // Ubah default sidebar menjadi false di mobile jika perlu, atau biarkan true di desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const u = localStorage.getItem('posq_user');
     if(u) setUser(JSON.parse(u));
+    
+    // Auto collapse sidebar on mobile
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
   }, []);
 
   const navItems = [
@@ -25,61 +43,81 @@ export function AdminLayout({ children, activePage, onNavigate, onLogout }: Admi
     { id: 'products', label: 'Products', icon: Package },
     { id: 'inventory', label: 'Inventory', icon: BarChart3 },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    // Ganti icon Settings duplicate dengan Tags
+    { id: 'categorybrand', label: 'Kategori & Brand', icon: Tags }, 
     { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'categorybrand', label: 'CategoryBrand', icon: Settings }
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans">
+    // Pastikan bg-muted/20 atau gray-100 konsisten
+    <div className="flex h-screen bg-muted/20 font-sans">
       {/* Sidebar */}
       <motion.aside 
         initial={false} 
-        animate={{ width: isSidebarOpen ? 240 : 0, opacity: isSidebarOpen ? 1 : 0 }} 
-        className="bg-white border-r border-gray-200 flex flex-col overflow-hidden"
+        animate={{ 
+          width: isSidebarOpen ? 260 : 0, 
+          opacity: isSidebarOpen ? 1 : 0 
+        }} 
+        className="bg-background border-r border-border flex flex-col overflow-hidden shadow-sm z-20"
       >
-        <div className="p-6 flex items-center gap-3 border-b border-gray-100">
-          <div className="w-8 h-8 bg-[#008069] rounded-lg flex items-center justify-center text-white font-bold">WP</div>
-          <span className="font-bold text-gray-800 text-lg whitespace-nowrap">Admin Panel</span>
+        <div className="p-6 flex items-center gap-3 border-b border-border h-16">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold">
+            P
+          </div>
+          <span className="font-bold text-foreground text-lg whitespace-nowrap">Admin Panel</span>
         </div>
+        
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map(item => (
             <button 
               key={item.id} 
               onClick={() => onNavigate(item.id)} 
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activePage === item.id ? 'bg-[#008069]/10 text-[#008069]' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap 
+                ${activePage === item.id 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
             >
               <item.icon size={20} />
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-gray-100">
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">
+
+        <div className="p-4 border-t border-border">
+          <button 
+            onClick={onLogout} 
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+          >
             <LogOut size={20} /> Logout
           </button>
         </div>
       </motion.aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-gray-200 h-16 px-6 flex items-center justify-between">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <header className="bg-background border-b border-border h-16 px-6 flex items-center justify-between shrink-0">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className="p-2 hover:bg-muted rounded-lg text-foreground transition-colors"
+          >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
+          
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{user?.name || 'Admin'}</p>
-              <p className="text-xs text-gray-500 capitalize">{user?.role || 'User'}</p>
+              <p className="text-sm font-medium text-foreground">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role || 'User'}</p>
             </div>
-            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-bold">
-              {user?.name?.[0] || 'A'}
+            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground font-bold">
+              {user?.name?.[0]?.toUpperCase() || 'A'}
             </div>
           </div>
         </header>
         
-        {/* Disini kuncinya: Render children dari App.tsx */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">
+        {/* Konten Halaman */}
+        <main className="flex-1 overflow-auto p-4 md:p-6 bg-muted/20">
+          <div className="max-w-7xl mx-auto space-y-6">
             {children} 
           </div>
         </main>

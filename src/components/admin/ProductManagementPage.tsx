@@ -197,7 +197,11 @@ export default function ProductManagementPage() {
     e.preventDefault();
     
     if (activeTab === 'products') {
-      // Validasi kategori dan brand tidak boleh "none"
+      // 1. Validasi Input
+      if (!productForm.name || !productForm.price || !productForm.stock) {
+        alert('Mohon lengkapi nama, harga, dan stok produk.');
+        return;
+      }
       if (productForm.categoryId === 'none') {
         alert('Silakan pilih kategori untuk produk');
         return;
@@ -207,36 +211,42 @@ export default function ProductManagementPage() {
         return;
       }
 
+      // 2. Konversi Data (Gunakan Number, BUKAN BigInt)
       addProduct.mutate(
         {
           name: productForm.name,
-          price: BigInt(productForm.price),
-          stock: BigInt(productForm.stock),
-          outletId: productForm.outletId ? BigInt(productForm.outletId) : null,
-          categoryId: productForm.categoryId !== 'none' ? BigInt(productForm.categoryId) : null,
-          brandId: productForm.brandId !== 'none' ? BigInt(productForm.brandId) : null,
+          price: Number(productForm.price), // Perbaikan: BigInt -> Number
+          stock: Number(productForm.stock), // Perbaikan: BigInt -> Number
+          outletId: productForm.outletId ? String(productForm.outletId) : null,
+          categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
+          brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
         },
         {
           onSuccess: () => {
             setIsAddDialogOpen(false);
             resetForms();
           },
+          onError: (err) => {
+            console.error(err);
+            alert("Gagal menambah produk. Pastikan koneksi aman.");
+          }
         }
       );
     } else if (activeTab === 'packages') {
       const validComponents = packageComponents.filter(c => c.productId && c.quantity);
       if (validComponents.length === 0) return;
 
-      const components: PackageComponent[] = validComponents.map(c => ({
-        productId: BigInt(c.productId),
-        quantity: BigInt(c.quantity),
+      // Perbaikan: BigInt -> Number
+      const components = validComponents.map(c => ({
+        productId: Number(c.productId), 
+        quantity: Number(c.quantity),
       }));
 
       createPackage.mutate(
         {
           name: packageForm.name,
-          price: BigInt(packageForm.price),
-          outletId: BigInt(packageForm.outletId),
+          price: Number(packageForm.price),
+          outletId: Number(packageForm.outletId),
           components,
         },
         {
@@ -250,18 +260,19 @@ export default function ProductManagementPage() {
       const validItems = bundleItems.filter(i => (i.isPackage ? i.packageId : i.productId) && i.quantity);
       if (validItems.length === 0) return;
 
-      const items: BundleItem[] = validItems.map(i => ({
-        productId: i.isPackage ? BigInt(0) : BigInt(i.productId),
-        packageId: i.isPackage ? BigInt(i.packageId) : null,
-        quantity: BigInt(i.quantity),
+      // Perbaikan: BigInt -> Number
+      const items = validItems.map(i => ({
+        productId: i.isPackage ? 0 : Number(i.productId),
+        packageId: i.isPackage ? Number(i.packageId) : null,
+        quantity: Number(i.quantity),
         isPackage: i.isPackage,
       }));
 
       createBundle.mutate(
         {
           name: bundleForm.name,
-          price: BigInt(bundleForm.price),
-          outletId: BigInt(bundleForm.outletId),
+          price: Number(bundleForm.price),
+          outletId: Number(bundleForm.outletId),
           items,
         },
         {
@@ -279,20 +290,20 @@ export default function ProductManagementPage() {
     if (!selectedItem) return;
 
     if ('components' in selectedItem) {
-      // Package
+      // Edit Package
       const validComponents = packageComponents.filter(c => c.productId && c.quantity);
       if (validComponents.length === 0) return;
 
-      const components: PackageComponent[] = validComponents.map(c => ({
-        productId: BigInt(c.productId),
-        quantity: BigInt(c.quantity),
+      const components = validComponents.map(c => ({
+        productId: Number(c.productId),
+        quantity: Number(c.quantity),
       }));
 
       updatePackage.mutate(
         {
           id: selectedItem.id,
           name: packageForm.name,
-          price: BigInt(packageForm.price),
+          price: Number(packageForm.price),
           components,
         },
         {
@@ -304,14 +315,14 @@ export default function ProductManagementPage() {
         }
       );
     } else if ('items' in selectedItem) {
-      // Bundle
+      // Edit Bundle
       const validItems = bundleItems.filter(i => (i.isPackage ? i.packageId : i.productId) && i.quantity);
       if (validItems.length === 0) return;
 
-      const items: BundleItem[] = validItems.map(i => ({
-        productId: i.isPackage ? BigInt(0) : BigInt(i.productId),
-        packageId: i.isPackage ? BigInt(i.packageId) : null,
-        quantity: BigInt(i.quantity),
+      const items = validItems.map(i => ({
+        productId: i.isPackage ? 0 : Number(i.productId),
+        packageId: i.isPackage ? Number(i.packageId) : null,
+        quantity: Number(i.quantity),
         isPackage: i.isPackage,
       }));
 
@@ -319,7 +330,7 @@ export default function ProductManagementPage() {
         {
           id: selectedItem.id,
           name: bundleForm.name,
-          price: BigInt(bundleForm.price),
+          price: Number(bundleForm.price),
           items,
         },
         {
@@ -331,7 +342,7 @@ export default function ProductManagementPage() {
         }
       );
     } else {
-      // Product - Validasi kategori dan brand tidak boleh "none"
+      // Edit Product
       if (productForm.categoryId === 'none') {
         alert('Silakan pilih kategori untuk produk');
         return;
@@ -345,11 +356,11 @@ export default function ProductManagementPage() {
         {
           id: selectedItem.id,
           name: productForm.name,
-          price: BigInt(productForm.price),
-          stock: BigInt(productForm.stock),
-          outletId: productForm.outletId ? BigInt(productForm.outletId) : null,
-          categoryId: productForm.categoryId !== 'none' ? BigInt(productForm.categoryId) : null,
-          brandId: productForm.brandId !== 'none' ? BigInt(productForm.brandId) : null,
+          price: Number(productForm.price), // Perbaikan: BigInt -> Number
+          stock: Number(productForm.stock), // Perbaikan: BigInt -> Number
+          outletId: productForm.outletId ? String(productForm.outletId) : null,
+          categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
+          brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
         },
         {
           onSuccess: () => {
