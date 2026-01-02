@@ -101,10 +101,22 @@ export default function KioskPage() {
 
   const bundlesWithStock = useMemo(() => {
     if (!bundles || !products || !packages) return [];
-    return bundles.map(bundle => ({
-      ...bundle,
-      calculatedStock: calculateBundleStock(bundle, products, packages),
-    }));
+    return bundles.map(bundle => {
+      // PERBAIKAN BUG: Cek manualStockEnabled SEBELUM calculate
+      // Jika manual stock enabled, gunakan nilai manual tanpa perhitungan otomatis
+      if (bundle.manualStockEnabled && bundle.manualStock !== undefined && bundle.manualStock !== null) {
+        return {
+          ...bundle,
+          calculatedStock: bundle.manualStock,
+        };
+      }
+      
+      // Jika tidak manual, hitung otomatis dari komponen
+      return {
+        ...bundle,
+        calculatedStock: calculateBundleStock(bundle, products, packages),
+      };
+    });
   }, [bundles, products, packages]);
 
   const formatCurrency = (amount: bigint) => {

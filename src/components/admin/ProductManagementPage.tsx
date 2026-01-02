@@ -116,12 +116,22 @@ export default function ProductManagementPage() {
   const bundlesWithStock = useMemo(() => {
     if (!bundles || !products || !packages) return [];
     return bundles.map(bundle => {
+      // PERBAIKAN BUG: Cek manualStockEnabled SEBELUM calculate
+      // Jika manual stock enabled, gunakan nilai manual tanpa perhitungan otomatis
+      if (bundle.manualStockEnabled && bundle.manualStock !== undefined && bundle.manualStock !== null) {
+        return {
+          ...bundle,
+          stock: bundle.manualStock,
+          calculatedStock: bundle.manualStock,
+        };
+      }
+      
+      // Jika tidak manual, hitung otomatis dari komponen
       const calculatedStock = calculateBundleStock(bundle, products, packages);
       return {
         ...bundle,
-        // PERBAIKAN: Jika manual stock enabled, gunakan manualStock, kalau tidak gunakan calculated
-        stock: bundle.manualStockEnabled ? bundle.manualStock : calculatedStock,
-        calculatedStock: bundle.manualStockEnabled ? bundle.manualStock : calculatedStock,
+        stock: calculatedStock,
+        calculatedStock: calculatedStock,
       };
     });
   }, [bundles, products, packages]);
@@ -771,7 +781,7 @@ export default function ProductManagementPage() {
                           </TableCell>
                           <TableCell>
                             <span className="font-medium">
-                              {bundle.manualStockEnabled ? bundle.manualStock : (bundle.stock ? bundle.stock.toString() : '0')}
+                              {bundle.stock !== undefined && bundle.stock !== null ? bundle.stock.toString() : '0'}
                             </span>
                           </TableCell>
                           {isOwner && (
