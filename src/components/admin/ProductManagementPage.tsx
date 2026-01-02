@@ -99,6 +99,8 @@ export default function ProductManagementPage() {
     name: '',
     price: '',
     outletId: '',
+    manualStockEnabled: false,
+    manualStock: '',
   });
   const [bundleItems, setBundleItems] = useState<BundleItemInput[]>([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
 
@@ -138,6 +140,8 @@ export default function ProductManagementPage() {
       name: '', 
       price: '', 
       outletId: userOutletId?.toString() || '',
+      manualStockEnabled: false,
+      manualStock: '',
     });
     setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
   };
@@ -177,6 +181,8 @@ export default function ProductManagementPage() {
         name: item.name,
         price: String(item.price || 0),
         outletId: String(item.outletId || ''),
+        manualStockEnabled: item.manualStockEnabled || false,
+        manualStock: item.manualStock ? String(item.manualStock) : '',
       });
 
       const rawItems = item.items || [];
@@ -272,13 +278,21 @@ export default function ProductManagementPage() {
         isPackage: i.isPackage,
       }));
 
+      const bundleData: any = {
+        name: bundleForm.name,
+        price: Number(bundleForm.price),
+        outletId: Number(bundleForm.outletId),
+        items,
+      };
+
+      // Add manual stock if enabled
+      if (bundleForm.manualStockEnabled) {
+        bundleData.manualStockEnabled = true;
+        bundleData.manualStock = Number(bundleForm.manualStock) || 0;
+      }
+
       createBundle.mutate(
-        {
-          name: bundleForm.name,
-          price: Number(bundleForm.price),
-          outletId: Number(bundleForm.outletId),
-          items,
-        },
+        bundleData,
         {
           onSuccess: () => {
             setIsAddDialogOpen(false);
@@ -326,13 +340,25 @@ export default function ProductManagementPage() {
         quantity: Number(i.quantity),
         isPackage: i.isPackage,
       }));
+
+      const bundleData: any = {
+        id: selectedItem.id,
+        name: bundleForm.name,
+        price: Number(bundleForm.price),
+        items,
+      };
+
+      // Add manual stock if enabled
+      if (bundleForm.manualStockEnabled) {
+        bundleData.manualStockEnabled = true;
+        bundleData.manualStock = Number(bundleForm.manualStock) || 0;
+      } else {
+        bundleData.manualStockEnabled = false;
+        bundleData.manualStock = null;
+      }
+
       updateBundle.mutate(
-        {
-          id: selectedItem.id,
-          name: bundleForm.name,
-          price: Number(bundleForm.price),
-          items,
-        },
+        bundleData,
         {
           onSuccess: () => {
             setIsEditDialogOpen(false);
@@ -726,7 +752,16 @@ export default function ProductManagementPage() {
                               })}
                             </div>
                           </TableCell>
-                          <TableCell>{bundle.stock ? bundle.stock.toString() : '0'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span>{bundle.manualStockEnabled ? bundle.manualStock : (bundle.stock ? bundle.stock.toString() : '0')}</span>
+                              {bundle.manualStockEnabled && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Manual
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           {isOwner && (
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -1011,6 +1046,41 @@ export default function ProductManagementPage() {
                         onChange={(e) => setBundleForm({ ...bundleForm, price: e.target.value })}
                         required
                       />
+                    </div>
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="add-manual-stock"
+                          checked={bundleForm.manualStockEnabled}
+                          onCheckedChange={(checked) => 
+                            setBundleForm({ 
+                              ...bundleForm, 
+                              manualStockEnabled: checked as boolean,
+                              manualStock: checked ? bundleForm.manualStock : ''
+                            })
+                          }
+                        />
+                        <Label htmlFor="add-manual-stock" className="text-sm font-medium cursor-pointer">
+                          Gunakan Stok Manual (Override stok otomatis)
+                        </Label>
+                      </div>
+                      {bundleForm.manualStockEnabled && (
+                        <div className="space-y-2">
+                          <Label htmlFor="add-manual-stock-value">Jumlah Stok Manual</Label>
+                          <Input
+                            id="add-manual-stock-value"
+                            type="number"
+                            min="0"
+                            value={bundleForm.manualStock}
+                            onChange={(e) => setBundleForm({ ...bundleForm, manualStock: e.target.value })}
+                            placeholder="Masukkan jumlah stok"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            💡 Stok manual akan menggantikan perhitungan stok otomatis dari komponen bundle
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -1328,6 +1398,41 @@ export default function ProductManagementPage() {
                         onChange={(e) => setBundleForm({ ...bundleForm, price: e.target.value })}
                         required
                       />
+                    </div>
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="edit-manual-stock"
+                          checked={bundleForm.manualStockEnabled}
+                          onCheckedChange={(checked) => 
+                            setBundleForm({ 
+                              ...bundleForm, 
+                              manualStockEnabled: checked as boolean,
+                              manualStock: checked ? bundleForm.manualStock : ''
+                            })
+                          }
+                        />
+                        <Label htmlFor="edit-manual-stock" className="text-sm font-medium cursor-pointer">
+                          Gunakan Stok Manual (Override stok otomatis)
+                        </Label>
+                      </div>
+                      {bundleForm.manualStockEnabled && (
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-manual-stock-value">Jumlah Stok Manual</Label>
+                          <Input
+                            id="edit-manual-stock-value"
+                            type="number"
+                            min="0"
+                            value={bundleForm.manualStock}
+                            onChange={(e) => setBundleForm({ ...bundleForm, manualStock: e.target.value })}
+                            placeholder="Masukkan jumlah stok"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            💡 Stok manual akan menggantikan perhitungan stok otomatis dari komponen bundle
+                          </p>
+                        </div>
+                      )}
                     </div>
                     {/* Bundle items editor */}
                     <div className="space-y-3">
