@@ -232,32 +232,7 @@ export default function ProductManagementPage() {
     }
     setIsEditDialogOpen(true);
   };
-      });
-
-      const rawItems = item.items || [];
-      const mappedItems = Array.isArray(rawItems) ? rawItems.map((i: any) => ({
-        productId: i.isPackage ? '' : (i.productId ? String(i.productId) : (i.product_id ? String(i.product_id) : '')),
-        packageId: i.isPackage ? (i.packageId ? String(i.packageId) : (i.package_id ? String(i.package_id) : '')) : '',
-        quantity: i.quantity ? String(i.quantity) : '1',
-        isPackage: !!(i.isPackage || i.is_package),
-      })) : [];
-
-      setBundleItems(mappedItems.length > 0 ? mappedItems : [{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
-      
-    } else {
-      // It's a product
-      const p = item as any; // Cast to any to access potentially unmapped fields safely
-      setProductForm({
-        name: p.name,
-        price: String(p.price || 0),
-        stock: String(p.stock || 0),
-        outletId: String(p.outletId || p.outlet_id || ''),
-        categoryId: p.categoryId ? String(p.categoryId) : (p.category_id ? String(p.category_id) : 'none'),
-        brandId: p.brandId ? String(p.brandId) : (p.brand_id ? String(p.brand_id) : 'none'),
-      });
-    }
-    setIsEditDialogOpen(true);
-  };
+   
 
   const handleDelete = (item: Product | ProductPackage | Bundle) => {
     setSelectedItem(item);
