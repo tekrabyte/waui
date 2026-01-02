@@ -596,7 +596,7 @@ export const api = {
     upload: async (file: File) => {
       const token = localStorage.getItem('posq_token');
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('image', file);
 
       const response = await fetch(`${BASE_URL}/upload-image`, {
         method: 'POST',
