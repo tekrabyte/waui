@@ -10,7 +10,12 @@ import {
   LogOut, 
   Menu, 
   X,
-  Tags // Icon baru untuk Category/Brand
+  Tags,
+  Boxes,
+  DollarSign,
+  FileText,
+  ShoppingCart,
+  UserCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -38,13 +43,17 @@ export function AdminLayout({ children, activePage, onNavigate, onLogout }: Admi
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'pos', label: 'POS', icon: ShoppingCart },
+    { id: 'kiosk', label: 'Kiosk', icon: Store },
     { id: 'outlets', label: 'Outlets', icon: Store },
     { id: 'staff', label: 'Staff', icon: Users },
+    { id: 'customers', label: 'Customers', icon: UserCheck },
     { id: 'products', label: 'Products', icon: Package },
-    { id: 'inventory', label: 'Inventory', icon: BarChart3 },
+    { id: 'inventory', label: 'Inventory', icon: Boxes },
+    { id: 'categorybrand', label: 'Kategori & Brand', icon: Tags },
+    { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'cashflow', label: 'Cashflow', icon: DollarSign },
     { id: 'payments', label: 'Payments', icon: CreditCard },
-    // Ganti icon Settings duplicate dengan Tags
-    { id: 'categorybrand', label: 'Kategori & Brand', icon: Tags }, 
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

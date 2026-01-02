@@ -115,10 +115,14 @@ export default function ProductManagementPage() {
 
   const bundlesWithStock = useMemo(() => {
     if (!bundles || !products || !packages) return [];
-    return bundles.map(bundle => ({
-      ...bundle,
-      stock: calculateBundleStock(bundle, products, packages),
-    }));
+    return bundles.map(bundle => {
+      const calculatedStock = calculateBundleStock(bundle, products, packages);
+      return {
+        ...bundle,
+        stock: calculatedStock,
+        calculatedStock: calculatedStock, // Simpan juga calculated stock untuk referensi
+      };
+    });
   }, [bundles, products, packages]);
 
   const resetForms = () => {
@@ -716,6 +720,7 @@ export default function ProductManagementPage() {
                         {isOwner && <TableHead>Outlet</TableHead>}
                         <TableHead>Harga</TableHead>
                         <TableHead>Item</TableHead>
+                        <TableHead>Tipe Stok</TableHead>
                         <TableHead>Stok</TableHead>
                         {isOwner && <TableHead className="text-right">Aksi</TableHead>}
                       </TableRow>
@@ -753,14 +758,20 @@ export default function ProductManagementPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span>{bundle.manualStockEnabled ? bundle.manualStock : (bundle.stock ? bundle.stock.toString() : '0')}</span>
-                              {bundle.manualStockEnabled && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Manual
-                                </Badge>
-                              )}
-                            </div>
+                            {bundle.manualStockEnabled ? (
+                              <Badge className="bg-blue-500 hover:bg-blue-600 text-white font-medium">
+                                Manual
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-500 hover:bg-green-600 text-white font-medium">
+                                Calculated
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">
+                              {bundle.manualStockEnabled ? bundle.manualStock : (bundle.stock ? bundle.stock.toString() : '0')}
+                            </span>
                           </TableCell>
                           {isOwner && (
                             <TableCell className="text-right">
@@ -1416,20 +1427,50 @@ export default function ProductManagementPage() {
                           Gunakan Stok Manual (Override stok otomatis)
                         </Label>
                       </div>
-                      {bundleForm.manualStockEnabled && (
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-manual-stock-value">Jumlah Stok Manual</Label>
-                          <Input
-                            id="edit-manual-stock-value"
-                            type="number"
-                            min="0"
-                            value={bundleForm.manualStock}
-                            onChange={(e) => setBundleForm({ ...bundleForm, manualStock: e.target.value })}
-                            placeholder="Masukkan jumlah stok"
-                            required
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            💡 Stok manual akan menggantikan perhitungan stok otomatis dari komponen bundle
+                      {bundleForm.manualStockEnabled && selectedItem && 'items' in selectedItem && (
+                        <>
+                          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                Stok Terhitung Otomatis:
+                              </span>
+                              <Badge className="bg-green-500 text-white font-semibold">
+                                {bundlesWithStock.find(b => b.id === selectedItem.id)?.calculatedStock?.toString() || '0'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                              Ini adalah stok yang dihitung berdasarkan komponen bundle
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-manual-stock-value">Jumlah Stok Manual</Label>
+                            <Input
+                              id="edit-manual-stock-value"
+                              type="number"
+                              min="0"
+                              value={bundleForm.manualStock}
+                              onChange={(e) => setBundleForm({ ...bundleForm, manualStock: e.target.value })}
+                              placeholder="Masukkan jumlah stok"
+                              required
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              💡 Stok manual akan menggantikan perhitungan stok otomatis dari komponen bundle
+                            </p>
+                          </div>
+                        </>
+                      )}
+                      {!bundleForm.manualStockEnabled && selectedItem && 'items' in selectedItem && (
+                        <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                              Stok Terhitung Otomatis:
+                            </span>
+                            <Badge className="bg-green-500 text-white font-semibold">
+                              {bundlesWithStock.find(b => b.id === selectedItem.id)?.calculatedStock?.toString() || '0'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                            Stok dihitung otomatis berdasarkan komponen bundle
                           </p>
                         </div>
                       )}

@@ -11,17 +11,19 @@ import { Toaster } from '@/components/ui/sonner';
 // --- BAGIAN INI DIPERBAIKI (Named Imports) ---
 // Karena file di folder admin menggunakan 'export function', kita wajib pakai { }
 import { AdminLayout } from './components/admin/AdminLayout';
-import DashboardPage from './components/admin/DashboardPage'; // Biasanya default, jika error ubah ke { DashboardPage }
+import DashboardPage from './components/admin/DashboardPage';
 import OutletsManagementPage from './components/admin/OutletsManagementPage'; 
-import StaffManagementPage from './components/admin/StaffManagementPage'; // Cek jika error, pakai { StaffManagementPage }
-import ProductManagementPage from './components/admin/ProductManagementPage'; // Cek jika error, pakai { ProductManagementPage }
-import StockManagementPage from './components/admin/StockManagementPage'; // Cek jika error, pakai { StockManagementPage }
+import StaffManagementPage from './components/admin/StaffManagementPage';
+import ProductManagementPage from './components/admin/ProductManagementPage';
+import StockManagementPage from './components/admin/StockManagementPage';
 import PaymentSettingsPage from './components/admin/PaymentSettingsPage';
-import CategoryBrandPage from './components/admin/CategoryBrandPage'; // Cek jika error, pakai { CategoryBrandPage }
-import ReportsPage from './components/admin/ReportsPage'; // Cek jika error, pakai { ReportsPage }
-import CashflowPage from './components/admin/CashflowPage'; // Cek jika error, pakai { CashflowPage }
-import CustomerManagementPage from './components/admin/CustomerManagementPage'; // Cek jika error, pakai { CustomerManagementPage }
-import SettingsPage from './components/admin/SettingsPage'; // Cek jika error, pakai { SettingsPage }
+import CategoryBrandPage from './components/admin/CategoryBrandPage';
+import ReportsPage from './components/admin/ReportsPage';
+import CashflowPage from './components/admin/CashflowPage';
+import CustomerManagementPage from './components/admin/CustomerManagementPage';
+import SettingsPage from './components/admin/SettingsPage';
+import KioskPage from './components/admin/KioskPage';
+import POSPage from './components/admin/POSPage';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -215,17 +217,18 @@ export function App() {
         <Toaster />
         <AdminLayout activePage={adminPage} onNavigate={setAdminPage} onLogout={handleLogout}>
           {adminPage === 'dashboard' && <DashboardPage />}
+          {adminPage === 'pos' && <POSPage />}
+          {adminPage === 'kiosk' && <KioskPage />}
           {adminPage === 'outlets' && <OutletsManagementPage />}
           {adminPage === 'staff' && <StaffManagementPage />}
+          {adminPage === 'customers' && <CustomerManagementPage />}
           {adminPage === 'products' && <ProductManagementPage />}
           {adminPage === 'inventory' && <StockManagementPage />}
-          {adminPage === 'categories' && <CategoryBrandPage />}
-          {adminPage === 'customers' && <CustomerManagementPage />}
+          {adminPage === 'categorybrand' && <CategoryBrandPage />}
           {adminPage === 'reports' && <ReportsPage />}
           {adminPage === 'cashflow' && <CashflowPage />}
           {adminPage === 'payments' && <PaymentSettingsPage />}
           {adminPage === 'settings' && <SettingsPage />}
-          {adminPage === 'categorybrand' && <CategoryBrandPage />}
         </AdminLayout>
       </>
     );
