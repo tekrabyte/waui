@@ -86,6 +86,7 @@ export default function ProductManagementPage() {
     outletId: '',
     categoryId: 'none',
     brandId: 'none',
+    imageUrl: '',
   });
 
   // Package form
@@ -148,6 +149,7 @@ export default function ProductManagementPage() {
       outletId: userOutletId?.toString() || '',
       categoryId: 'none',
       brandId: 'none',
+      imageUrl: '',
     });
     setPackageForm({ 
       name: '', 
@@ -228,6 +230,7 @@ export default function ProductManagementPage() {
         outletId: String(p.outletId || p.outlet_id || ''),
         categoryId: p.categoryId ? String(p.categoryId) : (p.category_id ? String(p.category_id) : 'none'),
         brandId: p.brandId ? String(p.brandId) : (p.brand_id ? String(p.brand_id) : 'none'),
+        imageUrl: p.image || '',
       });
     }
     setIsEditDialogOpen(true);
@@ -256,6 +259,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
+          imageUrl: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -373,6 +377,7 @@ export default function ProductManagementPage() {
         name: bundleForm.name,
         price: Number(bundleForm.price),
         items,
+        imageUrl: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -405,6 +410,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
+          imageUrl: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -924,6 +930,14 @@ export default function ProductManagementPage() {
                         />
                       </div>
                     </div>
+                    
+                    {/* Image Upload untuk Product */}
+                    <ImageUpload
+                      label="Gambar Produk"
+                      value={productForm.imageUrl}
+                      onChange={(url) => setProductForm({ ...productForm, imageUrl: url })}
+                      onClear={() => setProductForm({ ...productForm, imageUrl: '' })}
+                    />
                   </>
                 )}
 

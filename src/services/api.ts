@@ -590,6 +590,25 @@ export const api = {
        return handleResponse(response);
     }
   },
+
+  // 14. IMAGE UPLOAD
+  images: {
+    upload: async (file: File) => {
+      const token = localStorage.getItem('posq_token');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${BASE_URL}/upload-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      return handleResponse(response);
+    }
+  },
 };
 
 // Note:
