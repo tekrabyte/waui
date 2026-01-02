@@ -562,6 +562,7 @@ export default function ProductManagementPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Gambar</TableHead>
                         <TableHead>Nama Produk</TableHead>
                         {isOwner && <TableHead>Outlet</TableHead>}
                         <TableHead>Kategori</TableHead>
@@ -574,6 +575,19 @@ export default function ProductManagementPage() {
                     <TableBody>
                       {products.map((product) => (
                         <TableRow key={product.id}>
+                          <TableCell>
+                            {product.image ? (
+                              <img 
+                                src={product.image} 
+                                alt={product.name} 
+                                className="w-12 h-12 object-cover rounded-md"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                <Package className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           {isOwner && <TableCell>{getOutletName(product.outletId)}</TableCell>}
                           <TableCell>
@@ -1346,6 +1360,14 @@ export default function ProductManagementPage() {
                         />
                       </div>
                     </div>
+                    
+                    {/* Image Upload untuk Edit Product */}
+                    <ImageUpload
+                      label="Gambar Produk"
+                      value={productForm.imageUrl}
+                      onChange={(url) => setProductForm({ ...productForm, imageUrl: url })}
+                      onClear={() => setProductForm({ ...productForm, imageUrl: '' })}
+                    />
                   </>
                 )}
                 
