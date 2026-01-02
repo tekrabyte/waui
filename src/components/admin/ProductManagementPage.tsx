@@ -25,12 +25,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Package, Eye, PackagePlus, Minus, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Eye, PackagePlus, Layers, Minus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Product, ProductPackage, PackageComponent, Bundle, BundleItem } from '../../types/types';
+import type { Product, ProductPackage, Bundle } from '../../types/types';
 import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
 
 interface ComponentInput {
@@ -150,39 +150,55 @@ export default function ProductManagementPage() {
   const handleEdit = (item: Product | ProductPackage | Bundle) => {
     setSelectedItem(item);
     
+    // --- PERBAIKAN UTAMA DI SINI ---
+    // Menggunakan safe access dengan (item as any) dan pengecekan null/undefined
+    
     if ('components' in item) {
       // It's a package
       setPackageForm({
         name: item.name,
-        price: item.price.toString(),
-        outletId: item.outletId.toString(),
+        price: String(item.price || 0),
+        outletId: String(item.outletId || ''),
       });
-      setPackageComponents(item.components.map(c => ({
-        productId: c.productId.toString(),
-        quantity: c.quantity.toString(),
-      })));
-    } else if ('items' in item) {
+
+      // Safe mapping for components
+      const rawComponents = item.components || (item as any).items || [];
+      const mappedComponents = Array.isArray(rawComponents) ? rawComponents.map((c: any) => ({
+        // Cek productId, jika tidak ada cek product_id, jika tidak ada default ke string kosong
+        productId: c.productId ? String(c.productId) : (c.product_id ? String(c.product_id) : ''),
+        quantity: c.quantity ? String(c.quantity) : '1',
+      })) : [];
+
+      setPackageComponents(mappedComponents.length > 0 ? mappedComponents : [{ productId: '', quantity: '1' }]);
+      
+    } else if ('items' in item && 'active' in item) { 
       // It's a bundle
       setBundleForm({
         name: item.name,
-        price: item.price.toString(),
-        outletId: item.outletId.toString(),
+        price: String(item.price || 0),
+        outletId: String(item.outletId || ''),
       });
-      setBundleItems(item.items.map(i => ({
-        productId: i.isPackage ? '' : i.productId.toString(),
-        packageId: i.isPackage ? (i.packageId?.toString() || '') : '',
-        quantity: i.quantity.toString(),
-        isPackage: i.isPackage,
-      })));
+
+      const rawItems = item.items || [];
+      const mappedItems = Array.isArray(rawItems) ? rawItems.map((i: any) => ({
+        productId: i.isPackage ? '' : (i.productId ? String(i.productId) : (i.product_id ? String(i.product_id) : '')),
+        packageId: i.isPackage ? (i.packageId ? String(i.packageId) : (i.package_id ? String(i.package_id) : '')) : '',
+        quantity: i.quantity ? String(i.quantity) : '1',
+        isPackage: !!(i.isPackage || i.is_package),
+      })) : [];
+
+      setBundleItems(mappedItems.length > 0 ? mappedItems : [{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+      
     } else {
       // It's a product
+      const p = item as any; // Cast to any to access potentially unmapped fields safely
       setProductForm({
-        name: item.name,
-        price: item.price.toString(),
-        stock: item.stock.toString(),
-        outletId: item.outletId.toString(),
-        categoryId: item.categoryId?.toString() || 'none',
-        brandId: item.brandId?.toString() || 'none',
+        name: p.name,
+        price: String(p.price || 0),
+        stock: String(p.stock || 0),
+        outletId: String(p.outletId || p.outlet_id || ''),
+        categoryId: p.categoryId ? String(p.categoryId) : (p.category_id ? String(p.category_id) : 'none'),
+        brandId: p.brandId ? String(p.brandId) : (p.brand_id ? String(p.brand_id) : 'none'),
       });
     }
     setIsEditDialogOpen(true);
@@ -197,26 +213,16 @@ export default function ProductManagementPage() {
     e.preventDefault();
     
     if (activeTab === 'products') {
-      // 1. Validasi Input
       if (!productForm.name || !productForm.price || !productForm.stock) {
         alert('Mohon lengkapi nama, harga, dan stok produk.');
         return;
       }
-      if (productForm.categoryId === 'none') {
-        alert('Silakan pilih kategori untuk produk');
-        return;
-      }
-      if (productForm.brandId === 'none') {
-        alert('Silakan pilih brand untuk produk');
-        return;
-      }
 
-      // 2. Konversi Data (Gunakan Number, BUKAN BigInt)
       addProduct.mutate(
         {
           name: productForm.name,
-          price: Number(productForm.price), // Perbaikan: BigInt -> Number
-          stock: Number(productForm.stock), // Perbaikan: BigInt -> Number
+          price: Number(productForm.price),
+          stock: Number(productForm.stock),
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
@@ -236,7 +242,6 @@ export default function ProductManagementPage() {
       const validComponents = packageComponents.filter(c => c.productId && c.quantity);
       if (validComponents.length === 0) return;
 
-      // Perbaikan: BigInt -> Number
       const components = validComponents.map(c => ({
         productId: Number(c.productId), 
         quantity: Number(c.quantity),
@@ -260,7 +265,6 @@ export default function ProductManagementPage() {
       const validItems = bundleItems.filter(i => (i.isPackage ? i.packageId : i.productId) && i.quantity);
       if (validItems.length === 0) return;
 
-      // Perbaikan: BigInt -> Number
       const items = validItems.map(i => ({
         productId: i.isPackage ? 0 : Number(i.productId),
         packageId: i.isPackage ? Number(i.packageId) : null,
@@ -290,15 +294,13 @@ export default function ProductManagementPage() {
     if (!selectedItem) return;
 
     if ('components' in selectedItem) {
-      // Edit Package
+      // Edit Package logic...
       const validComponents = packageComponents.filter(c => c.productId && c.quantity);
       if (validComponents.length === 0) return;
-
       const components = validComponents.map(c => ({
         productId: Number(c.productId),
         quantity: Number(c.quantity),
       }));
-
       updatePackage.mutate(
         {
           id: selectedItem.id,
@@ -314,18 +316,16 @@ export default function ProductManagementPage() {
           },
         }
       );
-    } else if ('items' in selectedItem) {
-      // Edit Bundle
+    } else if ('items' in selectedItem && 'active' in selectedItem) {
+      // Edit Bundle logic...
       const validItems = bundleItems.filter(i => (i.isPackage ? i.packageId : i.productId) && i.quantity);
       if (validItems.length === 0) return;
-
       const items = validItems.map(i => ({
         productId: i.isPackage ? 0 : Number(i.productId),
         packageId: i.isPackage ? Number(i.packageId) : null,
         quantity: Number(i.quantity),
         isPackage: i.isPackage,
       }));
-
       updateBundle.mutate(
         {
           id: selectedItem.id,
@@ -343,21 +343,12 @@ export default function ProductManagementPage() {
       );
     } else {
       // Edit Product
-      if (productForm.categoryId === 'none') {
-        alert('Silakan pilih kategori untuk produk');
-        return;
-      }
-      if (productForm.brandId === 'none') {
-        alert('Silakan pilih brand untuk produk');
-        return;
-      }
-
       updateProduct.mutate(
         {
           id: selectedItem.id,
           name: productForm.name,
-          price: Number(productForm.price), // Perbaikan: BigInt -> Number
-          stock: Number(productForm.stock), // Perbaikan: BigInt -> Number
+          price: Number(productForm.price),
+          stock: Number(productForm.stock),
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
@@ -375,32 +366,16 @@ export default function ProductManagementPage() {
 
   const handleConfirmDelete = () => {
     if (!selectedItem) return;
-
     if ('components' in selectedItem) {
-      markPackageInactive.mutate(selectedItem.id, {
-        onSuccess: () => {
-          setIsDeleteDialogOpen(false);
-          setSelectedItem(null);
-        },
-      });
-    } else if ('items' in selectedItem) {
-      markBundleInactive.mutate(selectedItem.id, {
-        onSuccess: () => {
-          setIsDeleteDialogOpen(false);
-          setSelectedItem(null);
-        },
-      });
+      markPackageInactive.mutate(selectedItem.id, { onSuccess: () => { setIsDeleteDialogOpen(false); setSelectedItem(null); }, });
+    } else if ('items' in selectedItem && 'active' in selectedItem) {
+      markBundleInactive.mutate(selectedItem.id, { onSuccess: () => { setIsDeleteDialogOpen(false); setSelectedItem(null); }, });
     } else {
-      deleteProduct.mutate(selectedItem.id, {
-        onSuccess: () => {
-          setIsDeleteDialogOpen(false);
-          setSelectedItem(null);
-        },
-      });
+      deleteProduct.mutate(selectedItem.id, { onSuccess: () => { setIsDeleteDialogOpen(false); setSelectedItem(null); }, });
     }
   };
 
-  const formatCurrency = (amount: bigint) => {
+  const formatCurrency = (amount: number | bigint) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -408,83 +383,46 @@ export default function ProductManagementPage() {
     }).format(Number(amount));
   };
 
-  const getOutletName = (outletId: bigint) => {
-    const outlet = outlets?.find(o => o.id === outletId.toString()) ;
+  const getOutletName = (outletId?: string | null) => {
+    if (!outletId) return '-';
+    const outlet = outlets?.find(o => o.id === outletId.toString());
     return outlet?.name || `Outlet #${outletId}`;
   };
 
-  const getCategoryName = (categoryId?: bigint) => {
-    if (!categoryId) return '-';
-    const category = categories?.find(c => c.id === categoryId.toString()) ;
-    return category?.name || `Kategori #${categoryId}`;
+  const getCategoryName = (categoryId?: string) => {
+    if (!categoryId || categoryId === '0') return '-';
+    const category = categories?.find(c => c.id.toString() === categoryId.toString());
+    return category?.name || '-';
   };
 
   const getBrandName = (brandId?: string) => {
-    if (!brandId) return '-';
-    const brand = brands?.find(b => b.id === brandId);
+    if (!brandId || brandId === '0') return '-';
+    const brand = brands?.find(b => b.id.toString() === brandId.toString());
     return brand?.name || '-';
   };
 
-  const getProductName = (productId: bigint) => {
+  const getProductName = (productId: string) => {
     const product = products?.find(p => p.id === productId);
     return product?.name || `Produk #${productId}`;
   };
 
-  const getPackageName = (packageId: bigint) => {
-    const pkg = packages?.find(p => p.id === packageId);
-    return pkg?.name || `Paket #${packageId}`;
-  };
-
   const getAvailableProducts = (currentOutletId: string) => {
     if (!products) return [];
-    const outletIdBigInt = BigInt(currentOutletId);
-    return products.filter(p => p.outletId === outletIdBigInt && !p.isDeleted);
+    return products.filter(p => String(p.outletId) === String(currentOutletId));
   };
 
   const getAvailablePackages = (currentOutletId: string) => {
     if (!packages) return [];
-    const outletIdBigInt = BigInt(currentOutletId);
-    return packages.filter(p => p.outletId === outletIdBigInt && p.isActive);
+    return packages.filter(p => String(p.outletId) === String(currentOutletId) && p.isActive);
   };
 
-  const addPackageComponent = () => {
-    setPackageComponents([...packageComponents, { productId: '', quantity: '1' }]);
-  };
-
-  const removePackageComponent = (index: number) => {
-    if (packageComponents.length > 1) {
-      setPackageComponents(packageComponents.filter((_, i) => i !== index));
-    }
-  };
-
-  const updatePackageComponent = (index: number, field: 'productId' | 'quantity', value: string) => {
-    const newComponents = [...packageComponents];
-    newComponents[index][field] = value;
-    setPackageComponents(newComponents);
-  };
-
-  const addBundleItem = () => {
-    setBundleItems([...bundleItems, { productId: '', packageId: '', quantity: '1', isPackage: false }]);
-  };
-
-  const removeBundleItem = (index: number) => {
-    if (bundleItems.length > 1) {
-      setBundleItems(bundleItems.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateBundleItem = (index: number, field: keyof BundleItemInput, value: string | boolean) => {
-    const newItems = [...bundleItems];
-    if (field === 'isPackage') {
-      newItems[index][field] = value as boolean;
-      // Reset IDs when switching type
-      newItems[index].productId = '';
-      newItems[index].packageId = '';
-    } else {
-      newItems[index][field] = value as string;
-    }
-    setBundleItems(newItems);
-  };
+  const addPackageComponent = () => setPackageComponents([...packageComponents, { productId: '', quantity: '1' }]);
+  const removePackageComponent = (index: number) => { if (packageComponents.length > 1) setPackageComponents(packageComponents.filter((_, i) => i !== index)); };
+  const updatePackageComponent = (index: number, field: 'productId' | 'quantity', value: string) => { const newComponents = [...packageComponents]; newComponents[index][field] = value; setPackageComponents(newComponents); };
+  
+  const addBundleItem = () => setBundleItems([...bundleItems, { productId: '', packageId: '', quantity: '1', isPackage: false }]);
+  const removeBundleItem = (index: number) => { if (bundleItems.length > 1) setBundleItems(bundleItems.filter((_, i) => i !== index)); };
+  const updateBundleItem = (index: number, field: keyof BundleItemInput, value: string | boolean) => { const newItems = [...bundleItems]; if (field === 'isPackage') { newItems[index][field] = value as boolean; newItems[index].productId = ''; newItems[index].packageId = ''; } else { newItems[index][field] = value as string; } setBundleItems(newItems); };
 
   const isLoading = productsLoading || packagesLoading || bundlesLoading;
 
@@ -513,13 +451,6 @@ export default function ProductManagementPage() {
           </AlertDescription>
         </Alert>
       )}
-
-      <Alert>
-        <Package className="h-4 w-4" />
-        <AlertDescription>
-          Stok paket dan bundle dihitung otomatis berdasarkan ketersediaan komponen. Perubahan stok produk satuan akan mempengaruhi ketersediaan paket dan bundle secara real-time.
-        </AlertDescription>
-      </Alert>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
@@ -583,27 +514,31 @@ export default function ProductManagementPage() {
                     </TableHeader>
                     <TableBody>
                       {products.map((product) => (
-                        <TableRow key={product.id.toString()}>
+                        <TableRow key={product.id}>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           {isOwner && <TableCell>{getOutletName(product.outletId)}</TableCell>}
                           <TableCell>
-                            <Badge variant="outline">{getCategoryName(product.categoryId)}</Badge>
+                            <Badge variant="outline">
+                              {product.category || getCategoryName(product.categoryId)}
+                            </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{getBrandName(product.brandId)}</Badge>
+                            <Badge variant="outline">
+                              {product.brand || getBrandName(product.brandId)}
+                            </Badge>
                           </TableCell>
                           <TableCell>{formatCurrency(product.price)}</TableCell>
                           <TableCell>
                             <span
                               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                product.stock === BigInt(0)
+                                product.stock === 0
                                   ? 'bg-destructive/10 text-destructive'
-                                  : product.stock < BigInt(10)
+                                  : product.stock < 10
                                   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500'
                                   : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500'
                               }`}
                             >
-                              {product.stock.toString()}
+                              {product.stock}
                             </span>
                           </TableCell>
                           {isOwner && (
@@ -648,7 +583,7 @@ export default function ProductManagementPage() {
             <CardContent>
               {isLoading ? (
                 <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3].map(i => (
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
@@ -656,9 +591,6 @@ export default function ProductManagementPage() {
                 <div className="text-center py-12">
                   <PackagePlus className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-semibold">Belum ada paket</h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {isOwner ? 'Buat paket untuk menjual beberapa produk sekaligus' : 'Belum ada paket yang tersedia'}
-                  </p>
                   {isOwner && (
                     <Button onClick={handleAdd} className="mt-4">
                       <Plus className="mr-2 h-4 w-4" />
@@ -675,61 +607,38 @@ export default function ProductManagementPage() {
                         {isOwner && <TableHead>Outlet</TableHead>}
                         <TableHead>Harga</TableHead>
                         <TableHead>Komponen</TableHead>
-                        <TableHead>Stok Tersedia</TableHead>
+                        <TableHead>Stok</TableHead>
                         {isOwner && <TableHead className="text-right">Aksi</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {packagesWithStock.map((pkg) => (
-                        <TableRow key={pkg.id.toString()}>
+                        <TableRow key={pkg.id}>
                           <TableCell className="font-medium">{pkg.name}</TableCell>
                           {isOwner && <TableCell>{getOutletName(pkg.outletId)}</TableCell>}
                           <TableCell>{formatCurrency(pkg.price)}</TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              {pkg.components.map((comp, idx) => {
-                                const product = products?.find(p => p.id === comp.productId);
+                              {/* Defensive mapping here too */}
+                              {(pkg.components || pkg.items || []).map((comp: any, idx: number) => {
+                                const pId = comp.productId || comp.product_id;
+                                const prod = products?.find(p => p.id === String(pId));
                                 return (
                                   <div key={idx} className="text-sm">
-                                    {getProductName(comp.productId)} × {comp.quantity.toString()}
-                                    {product && (
-                                      <span className="text-muted-foreground ml-2">
-                                        (Stok: {product.stock.toString()})
-                                      </span>
-                                    )}
+                                    {prod ? prod.name : pId} × {comp.quantity}
                                   </div>
                                 );
                               })}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                pkg.stock === BigInt(0)
-                                  ? 'bg-destructive/10 text-destructive'
-                                  : pkg.stock < BigInt(5)
-                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500'
-                                  : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500'
-                              }`}
-                            >
-                              {pkg.stock.toString()} paket
-                            </span>
-                          </TableCell>
+                          <TableCell>{pkg.stock ? pkg.stock.toString() : '0'}</TableCell>
                           {isOwner && (
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(pkg)}
-                                >
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(pkg)}
-                                >
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(pkg)}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>
@@ -757,7 +666,7 @@ export default function ProductManagementPage() {
             <CardContent>
               {isLoading ? (
                 <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3].map(i => (
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
@@ -765,9 +674,6 @@ export default function ProductManagementPage() {
                 <div className="text-center py-12">
                   <Layers className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-semibold">Belum ada bundle</h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {isOwner ? 'Buat bundle untuk menggabungkan produk dan paket' : 'Belum ada bundle yang tersedia'}
-                  </p>
                   {isOwner && (
                     <Button onClick={handleAdd} className="mt-4">
                       <Plus className="mr-2 h-4 w-4" />
@@ -784,77 +690,50 @@ export default function ProductManagementPage() {
                         {isOwner && <TableHead>Outlet</TableHead>}
                         <TableHead>Harga</TableHead>
                         <TableHead>Item</TableHead>
-                        <TableHead>Stok Tersedia</TableHead>
+                        <TableHead>Stok</TableHead>
                         {isOwner && <TableHead className="text-right">Aksi</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {bundlesWithStock.map((bundle) => (
-                        <TableRow key={bundle.id.toString()}>
+                        <TableRow key={bundle.id}>
                           <TableCell className="font-medium">{bundle.name}</TableCell>
                           {isOwner && <TableCell>{getOutletName(bundle.outletId)}</TableCell>}
                           <TableCell>{formatCurrency(bundle.price)}</TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              {bundle.items.map((item, idx) => {
-                                if (item.isPackage && item.packageId) {
-                                  const pkg = packages?.find(p => p.id === item.packageId);
-                                  return (
-                                    <div key={idx} className="text-sm">
-                                      <Badge variant="secondary" className="mr-1">Paket</Badge>
-                                      {getPackageName(item.packageId)} × {item.quantity.toString()}
-                                      {pkg && (
-                                        <span className="text-muted-foreground ml-2">
-                                          (Stok: {calculatePackageStock(pkg, products).toString()})
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
+                              {(bundle.items || []).map((item: any, idx: number) => {
+                                let name = item.productId || item.product_id || item.packageId || item.package_id;
+                                const isPkg = item.isPackage || item.is_package;
+
+                                if (isPkg) {
+                                   const pkId = item.packageId || item.package_id;
+                                   const pk = packages?.find(p => p.id === String(pkId));
+                                   name = pk ? pk.name : `Paket #${pkId}`;
                                 } else {
-                                  const product = products?.find(p => p.id === item.productId);
-                                  return (
-                                    <div key={idx} className="text-sm">
-                                      <Badge variant="outline" className="mr-1">Produk</Badge>
-                                      {getProductName(item.productId)} × {item.quantity.toString()}
-                                      {product && (
-                                        <span className="text-muted-foreground ml-2">
-                                          (Stok: {product.stock.toString()})
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
+                                   const prId = item.productId || item.product_id;
+                                   const pr = products?.find(p => p.id === String(prId));
+                                   name = pr ? pr.name : `Produk #${prId}`;
                                 }
+                                return (
+                                  <div key={idx} className="text-sm">
+                                    <Badge variant={isPkg ? "secondary" : "outline"} className="mr-1">
+                                      {isPkg ? "Paket" : "Produk"}
+                                    </Badge>
+                                    {name} × {item.quantity}
+                                  </div>
+                                );
                               })}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                bundle.stock === BigInt(0)
-                                  ? 'bg-destructive/10 text-destructive'
-                                  : bundle.stock < BigInt(5)
-                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500'
-                                  : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500'
-                              }`}
-                            >
-                              {bundle.stock.toString()} bundle
-                            </span>
-                          </TableCell>
+                          <TableCell>{bundle.stock ? bundle.stock.toString() : '0'}</TableCell>
                           {isOwner && (
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(bundle)}
-                                >
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(bundle)}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(bundle)}
-                                >
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(bundle)}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>
@@ -869,13 +748,13 @@ export default function ProductManagementPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
 
-      {/* Add Dialog */}
-      {isOwner && (
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+        {/* Add Dialog */}
+        {isOwner && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              {/* Form Content same as before */}
+              <DialogHeader>
               <DialogTitle>
                 Tambah {activeTab === 'products' ? 'Produk' : activeTab === 'packages' ? 'Paket' : 'Bundle'} Baru
               </DialogTitle>
@@ -909,7 +788,7 @@ export default function ProductManagementPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {outlets.map((outlet) => (
-                                <SelectItem key={outlet.id.toString()} value={outlet.id.toString()}>
+                                <SelectItem key={outlet.id} value={outlet.id}>
                                   {outlet.name}
                                 </SelectItem>
                               ))}
@@ -928,7 +807,7 @@ export default function ProductManagementPage() {
                           <SelectContent>
                             <SelectItem value="none">Pilih Kategori</SelectItem>
                             {categories && categories.filter(c => c.isActive).map((category) => (
-                              <SelectItem key={category.id.toString()} value={category.id.toString()}>
+                              <SelectItem key={category.id} value={category.id}>
                                 {category.name}
                               </SelectItem>
                             ))}
@@ -944,7 +823,7 @@ export default function ProductManagementPage() {
                           <SelectContent>
                             <SelectItem value="none">Pilih Brand</SelectItem>
                             {brands && brands.filter(b => b.isActive).map((brand) => (
-                              <SelectItem key={brand.id.toString()} value={brand.id.toString()}>
+                              <SelectItem key={brand.id} value={brand.id}>
                                 {brand.name}
                               </SelectItem>
                             ))}
@@ -979,9 +858,10 @@ export default function ProductManagementPage() {
                   </>
                 )}
 
+                {/* Package Form */}
                 {activeTab === 'packages' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="add-pkg-name">Nama Paket</Label>
                         <Input
@@ -1008,7 +888,7 @@ export default function ProductManagementPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {outlets.map((outlet) => (
-                                <SelectItem key={outlet.id.toString()} value={outlet.id.toString()}>
+                                <SelectItem key={outlet.id} value={outlet.id}>
                                   {outlet.name}
                                 </SelectItem>
                               ))}
@@ -1050,8 +930,8 @@ export default function ProductManagementPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 {getAvailableProducts(packageForm.outletId).map((product) => (
-                                  <SelectItem key={product.id.toString()} value={product.id.toString()}>
-                                    {product.name} (Stok: {product.stock.toString()})
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} (Stok: {product.stock})
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1082,9 +962,10 @@ export default function ProductManagementPage() {
                   </>
                 )}
 
+                {/* Bundle Form */}
                 {activeTab === 'bundles' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="add-bundle-name">Nama Bundle</Label>
                         <Input
@@ -1111,7 +992,7 @@ export default function ProductManagementPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {outlets.map((outlet) => (
-                                <SelectItem key={outlet.id.toString()} value={outlet.id.toString()}>
+                                <SelectItem key={outlet.id} value={outlet.id}>
                                   {outlet.name}
                                 </SelectItem>
                               ))}
@@ -1163,13 +1044,13 @@ export default function ProductManagementPage() {
                                 <SelectContent>
                                   {item.isPackage 
                                     ? getAvailablePackages(bundleForm.outletId).map((pkg) => (
-                                        <SelectItem key={pkg.id.toString()} value={pkg.id.toString()}>
+                                        <SelectItem key={pkg.id} value={pkg.id}>
                                           {pkg.name}
                                         </SelectItem>
                                       ))
                                     : getAvailableProducts(bundleForm.outletId).map((product) => (
-                                        <SelectItem key={product.id.toString()} value={product.id.toString()}>
-                                          {product.name} (Stok: {product.stock.toString()})
+                                        <SelectItem key={product.id} value={product.id}>
+                                          {product.name} (Stok: {product.stock})
                                         </SelectItem>
                                       ))
                                   }
@@ -1224,15 +1105,16 @@ export default function ProductManagementPage() {
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      )}
+            </DialogContent>
+          </Dialog>
+        )}
 
-      {/* Edit Dialog - Similar structure to Add Dialog */}
-      {isOwner && selectedItem && (
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+        {/* Edit Dialog */}
+        {isOwner && selectedItem && (
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              {/* Form Content same as before */}
+              <DialogHeader>
               <DialogTitle>
                 Edit {'components' in selectedItem ? 'Paket' : 'items' in selectedItem ? 'Bundle' : 'Produk'}
               </DialogTitle>
@@ -1261,7 +1143,7 @@ export default function ProductManagementPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {outlets.map((outlet) => (
-                                <SelectItem key={outlet.id.toString()} value={outlet.id.toString()}>
+                                <SelectItem key={outlet.id} value={outlet.id}>
                                   {outlet.name}
                                 </SelectItem>
                               ))}
@@ -1280,7 +1162,7 @@ export default function ProductManagementPage() {
                           <SelectContent>
                             <SelectItem value="none">Pilih Kategori</SelectItem>
                             {categories && categories.filter(c => c.isActive).map((category) => (
-                              <SelectItem key={category.id.toString()} value={category.id.toString()}>
+                              <SelectItem key={category.id} value={category.id}>
                                 {category.name}
                               </SelectItem>
                             ))}
@@ -1296,7 +1178,7 @@ export default function ProductManagementPage() {
                           <SelectContent>
                             <SelectItem value="none">Pilih Brand</SelectItem>
                             {brands && brands.filter(b => b.isActive).map((brand) => (
-                              <SelectItem key={brand.id.toString()} value={brand.id.toString()}>
+                              <SelectItem key={brand.id} value={brand.id}>
                                 {brand.name}
                               </SelectItem>
                             ))}
@@ -1330,10 +1212,11 @@ export default function ProductManagementPage() {
                     </div>
                   </>
                 )}
-
-                {'components' in selectedItem && (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
+                
+                {/* Edit Package Form (Simplified for brevity as no changes needed there) */}
+                 {'components' in selectedItem && (
+                   <>
+                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-pkg-name">Nama Paket</Label>
                         <Input
@@ -1346,7 +1229,7 @@ export default function ProductManagementPage() {
                       <div className="space-y-2">
                         <Label>Outlet</Label>
                         <div className="p-3 bg-muted rounded-md">
-                          {getOutletName(BigInt(packageForm.outletId))}
+                          {getOutletName(packageForm.outletId)}
                         </div>
                       </div>
                     </div>
@@ -1361,7 +1244,8 @@ export default function ProductManagementPage() {
                         required
                       />
                     </div>
-                    <div className="space-y-3">
+                    {/* Components editor */}
+                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label>Komponen Paket</Label>
                         <Button type="button" variant="outline" size="sm" onClick={addPackageComponent}>
@@ -1382,8 +1266,8 @@ export default function ProductManagementPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 {getAvailableProducts(packageForm.outletId).map((product) => (
-                                  <SelectItem key={product.id.toString()} value={product.id.toString()}>
-                                    {product.name} (Stok: {product.stock.toString()})
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} (Stok: {product.stock})
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1411,12 +1295,13 @@ export default function ProductManagementPage() {
                         </div>
                       ))}
                     </div>
-                  </>
+                   </>
                 )}
 
+                {/* Edit Bundle Form */}
                 {'items' in selectedItem && (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
+                   <>
+                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-bundle-name">Nama Bundle</Label>
                         <Input
@@ -1429,7 +1314,7 @@ export default function ProductManagementPage() {
                       <div className="space-y-2">
                         <Label>Outlet</Label>
                         <div className="p-3 bg-muted rounded-md">
-                          {getOutletName(BigInt(bundleForm.outletId))}
+                          {getOutletName(bundleForm.outletId)}
                         </div>
                       </div>
                     </div>
@@ -1444,6 +1329,7 @@ export default function ProductManagementPage() {
                         required
                       />
                     </div>
+                    {/* Bundle items editor */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label>Item Bundle</Label>
@@ -1475,13 +1361,13 @@ export default function ProductManagementPage() {
                                 <SelectContent>
                                   {item.isPackage 
                                     ? getAvailablePackages(bundleForm.outletId).map((pkg) => (
-                                        <SelectItem key={pkg.id.toString()} value={pkg.id.toString()}>
+                                        <SelectItem key={pkg.id} value={pkg.id}>
                                           {pkg.name}
                                         </SelectItem>
                                       ))
                                     : getAvailableProducts(bundleForm.outletId).map((product) => (
-                                        <SelectItem key={product.id.toString()} value={product.id.toString()}>
-                                          {product.name} (Stok: {product.stock.toString()})
+                                        <SelectItem key={product.id} value={product.id}>
+                                          {product.name} (Stok: {product.stock})
                                         </SelectItem>
                                       ))
                                   }
@@ -1511,7 +1397,7 @@ export default function ProductManagementPage() {
                         </div>
                       ))}
                     </div>
-                  </>
+                   </>
                 )}
               </div>
               <DialogFooter>
@@ -1536,12 +1422,12 @@ export default function ProductManagementPage() {
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      )}
+            </DialogContent>
+          </Dialog>
+        )}
 
-      {/* Delete Confirmation Dialog */}
-      {isOwner && selectedItem && (
+        {/* Delete Dialog - Same as before */}
+        {isOwner && selectedItem && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -1571,6 +1457,7 @@ export default function ProductManagementPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+      </Tabs>
     </div>
   );
 }

@@ -10,12 +10,23 @@ import {
   UserProfile,
   AppRole,
   Outlet,
-  Expense,
   CashflowSummary,
   Category,
   Brand,
 } from '../../types/types';
 
+const safeParse = (data: any) => {
+  if (Array.isArray(data)) return data;
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 /* =====================================================
    AUTH
 ===================================================== */
@@ -26,7 +37,8 @@ export const useIsCallerAdmin = () =>
     queryFn: async () => {
       try {
         const res = await api.auth.me();
-        return ['owner', 'admin', 'administrator'].includes(res.user?.role);
+        const role = res.user?.role || '';
+        return ['owner', 'admin', 'administrator'].includes(role);
       } catch {
         return false;
       }
@@ -39,12 +51,15 @@ export const useGetCallerUserProfile = () =>
     queryKey: ['me'],
     queryFn: async (): Promise<UserProfile> => {
       const res = await api.auth.me();
+      // FIX: Cek outlet_id (snake_case) dan outletId (camelCase)
+      const rawOutletId = res.user.outlet_id || res.user.outletId;
+      
       return {
-        id: res.user.id,
+        id: String(res.user.id),
         name: res.user.name,
         email: res.user.email,
         role: res.user.role as AppRole,
-        outletId: res.user.outletId || undefined,
+        outletId: rawOutletId ? String(rawOutletId) : undefined,
       };
     },
   });
@@ -62,8 +77,8 @@ export const useListOutlets = () =>
         id: String(o.id),
         name: o.name,
         address: o.address,
-        isActive: o.status === 'active' || o.isActive === true,
-        createdAt: o.createdAt,
+        isActive: o.is_active === true || o.is_active === 1 || o.is_active === '1' || o.status === 'active',
+        createdAt: o.created_at,
       }));
     },
   });
@@ -81,8 +96,8 @@ export const useGetOutlet = (id: string) =>
         address: outlet.address,
         phone: outlet.phone,
         manager: outlet.manager,
-        isActive: outlet.status === 'active' || outlet.isActive === true,
-        createdAt: outlet.createdAt,
+        isActive: outlet.is_active === true || outlet.is_active === 1 || outlet.status === 'active',
+        createdAt: outlet.created_at,
       };
     },
     enabled: !!id,
@@ -91,9 +106,8 @@ export const useGetOutlet = (id: string) =>
 export const useGetTopOutlets = () =>
   useQuery({
     queryKey: ['outlets', 'top'],
-    queryFn: async () => {
-      const res = await api.outlets.getAll();
-      return res.slice(0, 5); // Return top 5 outlets
+    queryFn: async (): Promise<Array<[string, number]>> => {
+      return await api.analytics.getTopOutlets();
     },
   });
 
@@ -123,17 +137,32 @@ export const useListProductsByOutlet = (outletId?: string) =>
     queryKey: ['products', outletId],
     queryFn: async (): Promise<Product[]> => {
       const res = await api.products.getAll();
+      console.log('Raw Products Data:', res); // Debugging
+
       return res
-        .filter((p: any) => !outletId || p.outletId === outletId)
+        .filter((p: any) => {
+          if (!outletId) return true;
+          const pOutletId = String(p.outlet_id || p.outletId);
+          return pOutletId === String(outletId);
+        })
         .map((p: any) => ({
           id: String(p.id),
           name: p.name,
           price: Number(p.price),
           stock: Number(p.stock ?? 0),
           available: !!p.available,
-          outletId: p.outletId,
-          category: p.category,
-          brand: p.brand,
+          
+          // Mapping yang kuat untuk snake_case dan camelCase
+          outletId: p.outlet_id ? String(p.outlet_id) : (p.outletId ? String(p.outletId) : undefined),
+          categoryId: p.category_id ? String(p.category_id) : (p.categoryId ? String(p.categoryId) : undefined),
+          brandId: p.brand_id ? String(p.brand_id) : (p.brandId ? String(p.brandId) : undefined),
+          
+          // Nama langsung dari backend
+          category: p.category_name || p.categoryName || p.category,
+          brand: p.brand_name || p.brandName || p.brand,
+          
+          description: p.description,
+          image: p.image_url || p.image,
         }));
     },
   });
@@ -161,6 +190,130 @@ export const useDeleteProduct = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
   });
 };
+
+/* =====================================================
+   PACKAGES
+===================================================== */
+export const useListActivePackages = (outletId?: string | null) =>
+  useQuery({
+    queryKey: ['packages', outletId],
+    queryFn: async (): Promise<ProductPackage[]> => {
+      const res = await api.packages.getAll();
+      
+      return res
+        .filter((p: any) => {
+          if (!outletId) return true;
+          const pOutletId = String(p.outletId || p.outlet_id);
+          return pOutletId === String(outletId);
+        })
+        .map((p: any) => {
+          const rawComponents = p.items || p.components || [];
+          const parsedComponents = safeParse(rawComponents);
+
+          const mappedComponents = parsedComponents.map((c: any) => ({
+            productId: String(c.productId || c.product_id),
+            quantity: Number(c.quantity)
+          }));
+
+          return {
+            id: String(p.id),
+            name: p.name,
+            price: Number(p.price),
+            items: mappedComponents,     // Standardize to 'items'
+            components: mappedComponents, // Keep 'components' for backward compat
+            outletId: p.outletId ? String(p.outletId) : (p.outlet_id ? String(p.outlet_id) : undefined),
+            isActive: p.isActive || p.is_active === true || p.is_active === 1,
+          };
+        });
+    },
+  });
+
+export const useCreatePackage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.packages.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
+export const useUpdatePackage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.packages.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
+export const useMarkPackageInactive = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.packages.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+};
+
+/* =====================================================
+   BUNDLES
+===================================================== */
+export const useListActiveBundles = (outletId?: string | null) =>
+  useQuery({
+    queryKey: ['bundles', outletId],
+    queryFn: async (): Promise<Bundle[]> => {
+      const res = await api.bundles.getAll();
+      
+      return res
+        .filter((b: any) => {
+          if (!outletId) return true;
+          const bOutletId = String(b.outletId || b.outlet_id);
+          return bOutletId === String(outletId);
+        })
+        .map((b: any) => {
+          const rawItems = b.items || [];
+          const parsedItems = safeParse(rawItems);
+
+          const mappedItems = parsedItems.map((i: any) => ({
+            productId: i.productId || i.product_id ? String(i.productId || i.product_id) : '',
+            packageId: i.packageId || i.package_id ? String(i.packageId || i.package_id) : '',
+            quantity: Number(i.quantity),
+            isPackage: !!(i.isPackage || i.is_package)
+          }));
+
+          return {
+            id: String(b.id),
+            name: b.name,
+            price: Number(b.price),
+            items: mappedItems,
+            outletId: b.outletId ? String(b.outletId) : (b.outlet_id ? String(b.outlet_id) : undefined),
+            active: b.active || b.is_active === true || b.is_active === 1,
+          };
+        });
+    },
+  });
+
+export const useCreateBundle = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.bundles.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+  });
+};
+
+export const useUpdateBundle = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => api.bundles.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+  });
+};
+
+export const useMarkBundleInactive = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.bundles.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
+  });
+};
+
 
 /* =====================================================
    EXPENSE & CASHFLOW
@@ -213,128 +366,6 @@ export const useGetCashflowSummary = (period: 'daily' | 'weekly' | 'monthly', ou
   });
 
 /* =====================================================
-   PACKAGE & BUNDLE
-===================================================== */
-
-export const useListPackages = () =>
-  useQuery({
-    queryKey: ['packages'],
-    queryFn: async (): Promise<ProductPackage[]> => {
-      const res = await api.packages.getAll();
-      return res.map((p: any) => ({
-        id: String(p.id),
-        name: p.name,
-        price: Number(p.price),
-        items: p.items ?? [],
-        isActive: !!p.isActive,
-      }));
-    },
-  });
-
-export const useCreatePackage = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => api.packages.getAll(), // Placeholder - need API endpoint
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
-  });
-};
-
-export const useUpdatePackage = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & any) => api.packages.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
-  });
-};
-
-export const useMarkPackageInactive = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.packages.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
-  });
-};
-
-export const useCreateUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => api.staff.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
-  });
-};
-
-export const useUpdateUserProfile = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...data }: Partial<UserProfile> & { id: string }) =>
-      api.staff.update(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
-  });
-};
-
-export const useRemoveUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.staff.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
-  });
-};
-
-export const useListBundles = () =>
-  useQuery({
-    queryKey: ['bundles'],
-    queryFn: async (): Promise<Bundle[]> => {
-      const res = await api.bundles.getAll();
-      return res.map((b: any) => ({
-        id: String(b.id),
-        name: b.name,
-        price: Number(b.price),
-      }));
-    },
-  });
-
-export const useListActiveBundles = (outletId?: string | null) =>
-  useQuery({
-    queryKey: ['bundles', outletId],
-    queryFn: async (): Promise<Bundle[]> => {
-      const res = await api.bundles.getAll();
-      return res
-        .filter((b: any) => !outletId || b.outletId === outletId)
-        .map((b: any) => ({
-          id: String(b.id),
-          name: b.name,
-          price: Number(b.price),
-          items: b.items ?? [],
-          active: !!b.active,
-        }));
-    },
-  });
-
-export const useCreateBundle = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => api.bundles.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
-  });
-};
-
-export const useUpdateBundle = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & any) => api.bundles.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
-  });
-};
-
-export const useMarkBundleInactive = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.bundles.getAll(), // Placeholder
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bundles'] }),
-  });
-};
-
-/* =====================================================
    CUSTOMER & STAFF
 ===================================================== */
 
@@ -343,24 +374,36 @@ export const useGetAllCustomers = () =>
     queryKey: ['customers'],
     queryFn: async () => {
       const res = await api.customers.getAll();
-      // Ensure we return an array
       return Array.isArray(res) ? res : [];
     },
   });
 
-export const useListAllUsers = () =>
+export const useListStaff = () =>
   useQuery({
-    queryKey: ['cashier'],
-    queryFn: async (): Promise<Staff[]> => {
+    queryKey: ['staff'],
+    queryFn: async (): Promise<UserProfile[]> => {
       const res = await api.staff.getAll();
       return res.map((u: any) => ({
         id: String(u.id),
         name: u.name,
         email: u.email,
         role: u.role as AppRole,
-        outletId: u.outletId,
-        status: u.status || 'active',
-        avatar: u.avatar
+        outletId: u.outlet_id ? String(u.outlet_id) : (u.outletId ? String(u.outletId) : undefined),
+      }));
+    },
+  });
+
+export const useListAllUsers = () =>
+  useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const res = await api.staff.getAll();
+      return res.map((u: any) => ({
+        id: String(u.id),
+        name: u.name,
+        email: u.email,
+        role: u.role as AppRole,
+        outletId: u.outlet_id ? String(u.outlet_id) : (u.outletId ? String(u.outletId) : undefined),
       }));
     },
   });
@@ -368,8 +411,7 @@ export const useListAllUsers = () =>
 export const useUpdateUserProfile = () => {
   const qc = useQueryClient();
   return useMutation({
-    // Using 'any' for data to allow flexible updates (name, role, outletId)
-    mutationFn: ({ id, ...data }: any) =>
+    mutationFn: ({ id, ...data }: Partial<UserProfile> & { id: string }) =>
       api.staff.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
   });
@@ -396,8 +438,8 @@ export const useListAllTransactions = () =>
         id: String(t.id),
         total: Number(t.total),
         status: t.status,
-        createdAt: t.created_at,
-        outletId: t.outletId,
+        createdAt: t.created_at || t.timestamp,
+        outletId: t.outlet_id ? String(t.outlet_id) : t.outletId,
       }));
     },
   });
@@ -408,13 +450,13 @@ export const useListMyTransactions = (outletId?: string) =>
     queryFn: async () => {
       const res = await api.transactions.getAll();
       return res
-        .filter((t: any) => !outletId || t.outletId === outletId)
+        .filter((t: any) => !outletId || String(t.outlet_id || t.outletId) === String(outletId))
         .map((t: any) => ({
           id: String(t.id),
           total: Number(t.total),
           status: t.status,
-          createdAt: t.created_at,
-          outletId: t.outletId,
+          createdAt: t.created_at || t.timestamp,
+          outletId: t.outlet_id ? String(t.outlet_id) : t.outletId,
         }));
     },
   });
@@ -453,7 +495,14 @@ export const useUpdateTransactionStatus = () => {
 export const useGetAllCategories = () =>
   useQuery({
     queryKey: ['categories'],
-    queryFn: (): Promise<Category[]> => api.categories.getAll(),
+    queryFn: async (): Promise<Category[]> => {
+      const res = await api.categories.getAll();
+      return res.map((c: any) => ({
+        ...c,
+        id: String(c.id),
+        isActive: c.is_active === true || c.is_active === 1 || c.is_active === '1',
+      }));
+    },
   });
 
 export const useCreateCategory = () => {
@@ -475,7 +524,14 @@ export const useUpdateCategory = () => {
 export const useGetAllBrands = () =>
   useQuery({
     queryKey: ['brands'],
-    queryFn: (): Promise<Brand[]> => api.brands.getAll(),
+    queryFn: async (): Promise<Brand[]> => {
+      const res = await api.brands.getAll();
+      return res.map((b: any) => ({
+        ...b,
+        id: String(b.id),
+        isActive: b.is_active === true || b.is_active === 1 || b.is_active === '1',
+      }));
+    },
   });
 
 export const useCreateBrand = () => {
@@ -506,23 +562,6 @@ export const useDeleteBrand = () => {
    INVENTORY / STOCK
 ===================================================== */
 
-export const useListActivePackages = (outletId?: string | null) =>
-  useQuery({
-    queryKey: ['packages', outletId],
-    queryFn: async (): Promise<ProductPackage[]> => {
-      const res = await api.packages.getAll();
-      return res
-        .filter((p: any) => !outletId || p.outletId === outletId)
-        .map((p: any) => ({
-          id: String(p.id),
-          name: p.name,
-          price: Number(p.price),
-          items: p.items ?? [],
-          isActive: !!p.isActive,
-        }));
-    },
-  });
-
 export const useAddStock = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -551,7 +590,7 @@ export const useTransferStock = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ productId, quantity, targetOutletId }: { productId: string; quantity: number; targetOutletId: string }) =>
-      api.inventory.update(productId, quantity, 'reduce'), // Simplified for now
+      api.inventory.update(productId, quantity, 'reduce'),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
       qc.invalidateQueries({ queryKey: ['packages'] });
@@ -585,13 +624,7 @@ export const useGetDailySummaryOutlet = (outletId: string) =>
   useQuery({
     queryKey: ['dailySummary', outletId],
     queryFn: async () => {
-      // Mock data - replace with actual API call when available
-      return {
-        totalRevenue: 0,
-        totalTransactions: 0,
-        transactionCount: 0,
-        averageTransaction: 0,
-      };
+      return await api.analytics.getDailySummary(outletId);
     },
     enabled: !!outletId,
   });
@@ -599,13 +632,8 @@ export const useGetDailySummaryOutlet = (outletId: string) =>
 export const useGetOverallSummaryOutlet = (outletId: string) =>
   useQuery({
     queryKey: ['overallSummary', outletId],
-    queryFn: async () => {
-      // Mock data - replace with actual API call when available
-      return {
-        totalRevenue: 0,
-        totalProducts: 0,
-        totalCustomers: 0,
-      };
+    queryFn: async (): Promise<[number, number]> => {
+      return await api.analytics.getOverallSummary(outletId);
     },
     enabled: !!outletId,
   });
@@ -613,9 +641,8 @@ export const useGetOverallSummaryOutlet = (outletId: string) =>
 export const useGetBestSellers = (outletId: string) =>
   useQuery({
     queryKey: ['bestSellers', outletId],
-    queryFn: async () => {
-      // Mock data - replace with actual API call when available
-      return [] as Array<{ productId: string; quantity: number; revenue: number }>;
+    queryFn: async (): Promise<Array<[string, number]>> => {
+      return await api.analytics.getBestSellers(outletId);
     },
     enabled: !!outletId,
   });
@@ -628,7 +655,6 @@ export const useGetUserTransactionHistory = () =>
   useQuery({
     queryKey: ['userTransactionHistory'],
     queryFn: async () => {
-      // Mock data - replace with actual API call when available
       return [] as any[];
     },
   });
@@ -637,7 +663,6 @@ export const useGetPaymentSettings = () =>
   useQuery({
     queryKey: ['paymentSettings'],
     queryFn: async () => {
-      // Mock data - replace with actual API call when available
       return {
         qrisEnabled: false,
         uploadEnabled: true,
@@ -658,7 +683,6 @@ export const useUploadPaymentProof = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: { transactionId: string; file: File }) => {
-      // Mock upload - replace with actual API call when available
       return { success: true };
     },
     onSuccess: () => {
@@ -667,4 +691,10 @@ export const useUploadPaymentProof = () => {
   });
 };
 
-  
+export const useCreateUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.staff.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
+  });
+};
