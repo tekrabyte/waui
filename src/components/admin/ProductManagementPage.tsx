@@ -283,6 +283,7 @@ export default function ProductManagementPage() {
           price: Number(packageForm.price),
           outletId: Number(packageForm.outletId),
           components,
+          imageUrl: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -307,6 +308,7 @@ export default function ProductManagementPage() {
         price: Number(bundleForm.price),
         outletId: Number(bundleForm.outletId),
         items,
+        imageUrl: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -345,6 +347,7 @@ export default function ProductManagementPage() {
           name: packageForm.name,
           price: Number(packageForm.price),
           components,
+          imageUrl: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -974,6 +977,15 @@ export default function ProductManagementPage() {
                         required
                       />
                     </div>
+                    
+                    {/* Image Upload untuk Package */}
+                    <ImageUpload
+                      label="Gambar Paket"
+                      value={packageForm.imageUrl}
+                      onChange={(url) => setPackageForm({ ...packageForm, imageUrl: url })}
+                      onClear={() => setPackageForm({ ...packageForm, imageUrl: '' })}
+                    />
+                    
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label>Komponen Paket</Label>
@@ -1078,6 +1090,15 @@ export default function ProductManagementPage() {
                         required
                       />
                     </div>
+                    
+                    {/* Image Upload untuk Bundle */}
+                    <ImageUpload
+                      label="Gambar Bundle"
+                      value={bundleForm.imageUrl}
+                      onChange={(url) => setBundleForm({ ...bundleForm, imageUrl: url })}
+                      onClear={() => setBundleForm({ ...bundleForm, imageUrl: '' })}
+                    />
+                    
                     <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1345,6 +1366,15 @@ export default function ProductManagementPage() {
                         required
                       />
                     </div>
+                    
+                    {/* Image Upload untuk Edit Package */}
+                    <ImageUpload
+                      label="Gambar Paket"
+                      value={packageForm.imageUrl}
+                      onChange={(url) => setPackageForm({ ...packageForm, imageUrl: url })}
+                      onClear={() => setPackageForm({ ...packageForm, imageUrl: '' })}
+                    />
+                    
                     {/* Components editor */}
                      <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -1430,6 +1460,15 @@ export default function ProductManagementPage() {
                         required
                       />
                     </div>
+                    
+                    {/* Image Upload untuk Edit Bundle */}
+                    <ImageUpload
+                      label="Gambar Bundle"
+                      value={bundleForm.imageUrl}
+                      onChange={(url) => setBundleForm({ ...bundleForm, imageUrl: url })}
+                      onClear={() => setBundleForm({ ...bundleForm, imageUrl: '' })}
+                    />
+                    
                     <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
                       <div className="flex items-center space-x-2">
                         <Checkbox
