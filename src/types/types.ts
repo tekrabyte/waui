@@ -51,9 +51,9 @@ export interface Product {
   name: string;
   price: number;
   category?: string;
-  categoryId?: bigint;
+  categoryId?: string;
   brand?: string;
-  brandId?: bigint;
+  brandId?: string;
   image?: string;
   available: boolean;
   description?: string;

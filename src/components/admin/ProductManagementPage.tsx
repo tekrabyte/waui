@@ -416,10 +416,10 @@ export default function ProductManagementPage() {
   const getCategoryName = (categoryId?: bigint) => {
     if (!categoryId) return '-';
     const category = categories?.find(c => c.id === categoryId.toString()) ;
-    return category?.name || '-';
+    return category?.name || `Kategori #${categoryId}`;
   };
 
-  const getBrandName = (brandId?: bigint) => {
+  const getBrandName = (brandId?: string) => {
     if (!brandId) return '-';
     const brand = brands?.find(b => b.id === brandId);
     return brand?.name || '-';
