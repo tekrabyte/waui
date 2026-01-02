@@ -283,6 +283,9 @@ export const api = {
         isActive: !!bundle.is_active,
         available: !!bundle.is_active,
         createdAt: bundle.created_at,
+        // PERBAIKAN: Map field manual stock dari backend
+        manualStockEnabled: !!bundle.manual_stock_enabled,
+        manualStock: bundle.manual_stock ? Number(bundle.manual_stock) : undefined,
       }));
     },
     create: async (data: any) => {

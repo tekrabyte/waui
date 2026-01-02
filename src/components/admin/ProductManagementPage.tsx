@@ -119,8 +119,9 @@ export default function ProductManagementPage() {
       const calculatedStock = calculateBundleStock(bundle, products, packages);
       return {
         ...bundle,
-        stock: calculatedStock,
-        calculatedStock: calculatedStock, // Simpan juga calculated stock untuk referensi
+        // PERBAIKAN: Jika manual stock enabled, gunakan manualStock, kalau tidak gunakan calculated
+        stock: bundle.manualStockEnabled ? bundle.manualStock : calculatedStock,
+        calculatedStock: bundle.manualStockEnabled ? bundle.manualStock : calculatedStock,
       };
     });
   }, [bundles, products, packages]);
