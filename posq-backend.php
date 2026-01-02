@@ -24,6 +24,22 @@ class posq_Backend {
         $charset_collate = $wpdb->get_charset_collate();
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
+        // Add image_url columns to existing tables if they don't exist
+        $packages_table = $wpdb->prefix . 'posq_packages';
+        $bundles_table = $wpdb->prefix . 'posq_bundles';
+        
+        // Check and add image_url to packages table
+        $packages_columns = $wpdb->get_col("DESCRIBE {$packages_table}");
+        if (!in_array('image_url', $packages_columns)) {
+            $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN image_url varchar(500) AFTER is_active");
+        }
+        
+        // Check and add image_url to bundles table
+        $bundles_columns = $wpdb->get_col("DESCRIBE {$bundles_table}");
+        if (!in_array('image_url', $bundles_columns)) {
+            $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN image_url varchar(500) AFTER manual_stock");
+        }
+
         // Table: posq_outlets
         $sql = "CREATE TABLE {$wpdb->prefix}posq_outlets (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -514,6 +530,13 @@ class posq_Backend {
             'permission_callback' => [self::class, 'check_auth']
         ]);
 
+        // Image Upload
+        register_rest_route($namespace, '/upload-image', [
+            'methods' => 'POST',
+            'callback' => [self::class, 'upload_image'],
+            'permission_callback' => [self::class, 'check_auth']
+        ]);
+
         register_rest_route($namespace, '/reports/cashflow', [
             'methods' => 'GET',
             'callback' => [self::class, 'report_cashflow'],
@@ -529,13 +552,6 @@ class posq_Backend {
         register_rest_route($namespace, '/settings/role-menu-access', [
             'methods' => 'GET',
             'callback' => [self::class, 'get_role_menu_access'],
-            'permission_callback' => [self::class, 'check_auth']
-        ]);
-
-        // Image Upload
-        register_rest_route($namespace, '/upload-image', [
-            'methods' => 'POST',
-            'callback' => [self::class, 'upload_image'],
             'permission_callback' => [self::class, 'check_auth']
         ]);
     }
@@ -649,6 +665,65 @@ class posq_Backend {
 
     public static function is_admin() {
         return ['isAdmin' => self::is_owner()];
+    }
+
+    /**
+     * Upload image to WordPress Media Library
+     */
+    public static function upload_image($request) {
+        $files = $request->get_file_params();
+        
+        if (empty($files['image'])) {
+            return new WP_Error('no_image', 'No image file provided', ['status' => 400]);
+        }
+
+        $file = $files['image'];
+        
+        // Validate file type
+        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!in_array($file['type'], $allowed_types)) {
+            return new WP_Error('invalid_type', 'Invalid file type. Only JPG, PNG, GIF, and WEBP allowed', ['status' => 400]);
+        }
+
+        // Validate file size (max 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) {
+            return new WP_Error('file_too_large', 'File size exceeds 5MB limit', ['status' => 400]);
+        }
+
+        // WordPress media upload
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+
+        $upload = wp_handle_upload($file, ['test_form' => false]);
+        
+        if (isset($upload['error'])) {
+            return new WP_Error('upload_failed', $upload['error'], ['status' => 500]);
+        }
+
+        // Create attachment
+        $attachment = [
+            'post_mime_type' => $upload['type'],
+            'post_title' => sanitize_file_name($file['name']),
+            'post_content' => '',
+            'post_status' => 'inherit'
+        ];
+
+        $attachment_id = wp_insert_attachment($attachment, $upload['file']);
+        
+        if (is_wp_error($attachment_id)) {
+            return new WP_Error('attachment_failed', 'Failed to create attachment', ['status' => 500]);
+        }
+
+        // Generate metadata
+        $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+        wp_update_attachment_metadata($attachment_id, $attachment_data);
+
+        return [
+            'success' => true,
+            'url' => $upload['url'],
+            'attachment_id' => $attachment_id
+        ];
     }
 
     private static function format_user_data($user) {
@@ -1237,19 +1312,13 @@ class posq_Backend {
         global $wpdb;
         
         // Insert package
-        $insert_data = [
+        $wpdb->insert($wpdb->prefix . 'posq_packages', [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
             'outlet_id' => (int) $data['outletId'],
-            'is_active' => 1
-        ];
-
-        // Add image_url if provided
-        if (!empty($data['image_url'])) {
-            $insert_data['image_url'] = esc_url_raw($data['image_url']);
-        }
-
-        $wpdb->insert($wpdb->prefix . 'posq_packages', $insert_data);
+            'is_active' => 1,
+            'image_url' => !empty($data['imageUrl']) ? esc_url_raw($data['imageUrl']) : null
+        ]);
 
         $package_id = $wpdb->insert_id;
 
@@ -1275,7 +1344,7 @@ class posq_Backend {
         $update_data = [];
         if (!empty($data['name'])) $update_data['name'] = sanitize_text_field($data['name']);
         if (isset($data['price'])) $update_data['price'] = (int) $data['price'];
-        if (isset($data['image_url'])) $update_data['image_url'] = esc_url_raw($data['image_url']);
+        if (isset($data['imageUrl'])) $update_data['image_url'] = !empty($data['imageUrl']) ? esc_url_raw($data['imageUrl']) : null;
 
         if (!empty($update_data)) {
             $wpdb->update(
@@ -1383,22 +1452,16 @@ class posq_Backend {
             $manual_stock = (int) $data['manualStock'];
         }
         
-        // Insert bundle with manual stock fields and image_url
-        $insert_data = [
+        // Insert bundle with manual stock fields
+        $wpdb->insert($wpdb->prefix . 'posq_bundles', [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
             'outlet_id' => (int) $data['outletId'],
             'is_active' => 1,
             'manual_stock_enabled' => $manual_stock_enabled,
-            'manual_stock' => $manual_stock
-        ];
-
-        // Add image_url if provided
-        if (!empty($data['image_url'])) {
-            $insert_data['image_url'] = esc_url_raw($data['image_url']);
-        }
-
-        $wpdb->insert($wpdb->prefix . 'posq_bundles', $insert_data);
+            'manual_stock' => $manual_stock,
+            'image_url' => !empty($data['imageUrl']) ? esc_url_raw($data['imageUrl']) : null
+        ]);
 
         $bundle_id = $wpdb->insert_id;
 
