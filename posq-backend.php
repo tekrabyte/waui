@@ -701,6 +701,20 @@ class posq_Backend {
             return new WP_Error('upload_failed', $upload['error'], ['status' => 500]);
         }
 
+        // Crop image to 1:1 (square) ratio
+        $cropped_file = self::crop_image_to_square($upload['file']);
+        
+        if (is_wp_error($cropped_file)) {
+            // If crop fails, continue with original image
+            $final_file = $upload['file'];
+            $final_url = $upload['url'];
+        } else {
+            $final_file = $cropped_file;
+            // Get the new URL for cropped image
+            $upload_dir = wp_upload_dir();
+            $final_url = str_replace($upload_dir['path'], $upload_dir['url'], $cropped_file);
+        }
+
         // Create attachment
         $attachment = [
             'post_mime_type' => $upload['type'],
@@ -709,21 +723,53 @@ class posq_Backend {
             'post_status' => 'inherit'
         ];
 
-        $attachment_id = wp_insert_attachment($attachment, $upload['file']);
+        $attachment_id = wp_insert_attachment($attachment, $final_file);
         
         if (is_wp_error($attachment_id)) {
             return new WP_Error('attachment_failed', 'Failed to create attachment', ['status' => 500]);
         }
 
         // Generate metadata
-        $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+        $attachment_data = wp_generate_attachment_metadata($attachment_id, $final_file);
         wp_update_attachment_metadata($attachment_id, $attachment_data);
 
         return [
             'success' => true,
-            'url' => $upload['url'],
+            'url' => $final_url,
             'attachment_id' => $attachment_id
         ];
+    }
+
+    /**
+     * Crop image to 1:1 square ratio
+     */
+    private static function crop_image_to_square($file_path) {
+        $image_editor = wp_get_image_editor($file_path);
+        
+        if (is_wp_error($image_editor)) {
+            return $image_editor;
+        }
+
+        $size = $image_editor->get_size();
+        $width = $size['width'];
+        $height = $size['height'];
+
+        // Calculate crop dimensions for 1:1 ratio
+        $new_size = min($width, $height);
+        $x = ($width - $new_size) / 2;
+        $y = ($height - $new_size) / 2;
+
+        // Crop to square
+        $image_editor->crop($x, $y, $new_size, $new_size);
+
+        // Save cropped image
+        $saved = $image_editor->save($file_path);
+        
+        if (is_wp_error($saved)) {
+            return $saved;
+        }
+
+        return $saved['path'];
     }
 
     private static function format_user_data($user) {

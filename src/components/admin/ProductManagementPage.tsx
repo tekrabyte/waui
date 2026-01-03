@@ -583,8 +583,10 @@ export default function ProductManagementPage() {
                                 className="w-12 h-12 object-cover rounded-md"
                               />
                             ) : (
-                              <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                                <Package className="h-6 w-6 text-muted-foreground" />
+                              <div 
+                                className={`w-12 h-12 rounded-md flex items-center justify-center text-white font-bold text-sm ${getColorFromString(product.name)}`}
+                              >
+                                {getInitials(product.name)}
                               </div>
                             )}
                           </TableCell>
@@ -676,6 +678,7 @@ export default function ProductManagementPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Gambar</TableHead>
                         <TableHead>Nama Paket</TableHead>
                         {isOwner && <TableHead>Outlet</TableHead>}
                         <TableHead>Harga</TableHead>
@@ -687,6 +690,21 @@ export default function ProductManagementPage() {
                     <TableBody>
                       {packagesWithStock.map((pkg) => (
                         <TableRow key={pkg.id}>
+                          <TableCell>
+                            {pkg.image ? (
+                              <img 
+                                src={pkg.image} 
+                                alt={pkg.name} 
+                                className="w-12 h-12 object-cover rounded-md"
+                              />
+                            ) : (
+                              <div 
+                                className={`w-12 h-12 rounded-md flex items-center justify-center text-white font-bold text-sm ${getColorFromString(pkg.name)}`}
+                              >
+                                {getInitials(pkg.name)}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{pkg.name}</TableCell>
                           {isOwner && <TableCell>{getOutletName(pkg.outletId)}</TableCell>}
                           <TableCell>{formatCurrency(pkg.price)}</TableCell>
@@ -759,6 +777,7 @@ export default function ProductManagementPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Gambar</TableHead>
                         <TableHead>Nama Bundle</TableHead>
                         {isOwner && <TableHead>Outlet</TableHead>}
                         <TableHead>Harga</TableHead>
@@ -771,6 +790,21 @@ export default function ProductManagementPage() {
                     <TableBody>
                       {bundlesWithStock.map((bundle) => (
                         <TableRow key={bundle.id}>
+                          <TableCell>
+                            {bundle.image ? (
+                              <img 
+                                src={bundle.image} 
+                                alt={bundle.name} 
+                                className="w-12 h-12 object-cover rounded-md"
+                              />
+                            ) : (
+                              <div 
+                                className={`w-12 h-12 rounded-md flex items-center justify-center text-white font-bold text-sm ${getColorFromString(bundle.name)}`}
+                              >
+                                {getInitials(bundle.name)}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{bundle.name}</TableCell>
                           {isOwner && <TableCell>{getOutletName(bundle.outletId)}</TableCell>}
                           <TableCell>{formatCurrency(bundle.price)}</TableCell>
