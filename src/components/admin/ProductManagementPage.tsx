@@ -103,6 +103,7 @@ export default function ProductManagementPage() {
     name: '',
     price: '',
     outletId: '',
+    isFactoryBundle: false,
     manualStockEnabled: false,
     manualStock: '',
     imageUrl: '',
@@ -162,6 +163,7 @@ export default function ProductManagementPage() {
       name: '', 
       price: '', 
       outletId: userOutletId?.toString() || '',
+      isFactoryBundle: false,
       manualStockEnabled: false,
       manualStock: '',
       imageUrl: '',
@@ -201,10 +203,12 @@ export default function ProductManagementPage() {
       
     } else if ('items' in item && 'active' in item) { 
       // It's a bundle
+      const isFactory = !item.outletId || item.outletId === '' || item.outletId === 'null';
       setBundleForm({
         name: item.name,
         price: String(item.price || 0),
-        outletId: String(item.outletId || ''),
+        outletId: isFactory ? '' : String(item.outletId),
+        isFactoryBundle: isFactory,
         manualStockEnabled: item.manualStockEnabled || false,
         manualStock: item.manualStock ? String(item.manualStock) : '',
         imageUrl: item.image || '',
@@ -310,7 +314,7 @@ export default function ProductManagementPage() {
       const bundleData: any = {
         name: bundleForm.name,
         price: Number(bundleForm.price),
-        outletId: Number(bundleForm.outletId),
+        outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
         imageUrl: bundleForm.imageUrl || undefined,
       };
@@ -376,6 +380,7 @@ export default function ProductManagementPage() {
         id: selectedItem.id,
         name: bundleForm.name,
         price: Number(bundleForm.price),
+        outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
         imageUrl: bundleForm.imageUrl || undefined,
       };
@@ -1105,8 +1110,7 @@ export default function ProductManagementPage() {
                 {/* Bundle Form */}
                 {activeTab === 'bundles' && (
                   <>
-                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                     <div className="space-y-2">
                         <Label htmlFor="add-bundle-name">Nama Bundle</Label>
                         <Input
                           id="add-bundle-name"
@@ -1116,7 +1120,32 @@ export default function ProductManagementPage() {
                           required
                         />
                       </div>
-                      {outlets && outlets.length > 0 && (
+                      
+                      {/* Bundle Pabrik Checkbox */}
+                      <div className="space-y-3 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="add-factory-bundle"
+                            checked={bundleForm.isFactoryBundle}
+                            onCheckedChange={(checked) => 
+                              setBundleForm({ 
+                                ...bundleForm, 
+                                isFactoryBundle: checked as boolean,
+                                outletId: checked ? '' : bundleForm.outletId
+                              })
+                            }
+                          />
+                          <Label htmlFor="add-factory-bundle" className="text-sm font-medium cursor-pointer">
+                            Bundle Pabrik (Tersedia untuk semua outlet)
+                          </Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          💡 Bundle pabrik tidak terikat dengan outlet tertentu dan dapat digunakan di semua outlet
+                        </p>
+                      </div>
+                      
+                      {/* Outlet Selection - Only show if not factory bundle */}
+                      {!bundleForm.isFactoryBundle && outlets && outlets.length > 0 && (
                         <div className="space-y-2">
                           <Label htmlFor="add-bundle-outlet">Outlet</Label>
                           <Select 
@@ -1125,7 +1154,7 @@ export default function ProductManagementPage() {
                               setBundleForm({ ...bundleForm, outletId: value });
                               setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
                             }}
-                            required
+                            required={!bundleForm.isFactoryBundle}
                           >
                             <SelectTrigger id="add-bundle-outlet">
                               <SelectValue placeholder="Pilih outlet" />
@@ -1140,7 +1169,6 @@ export default function ProductManagementPage() {
                           </Select>
                         </div>
                       )}
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="add-bundle-price">Harga Bundle (Rp)</Label>
                       <Input
@@ -1405,8 +1433,8 @@ export default function ProductManagementPage() {
                   </>
                 )}
                 
-                {/* Edit Package Form (Simplified for brevity as no changes needed there) */}
-                 {'components' in selectedItem && (
+                {/* Edit Package Form */}
+                 {'components' in selectedItem && !('active' in selectedItem) && (
                    <>
                      <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -1500,7 +1528,7 @@ export default function ProductManagementPage() {
                 )}
 
                 {/* Edit Bundle Form */}
-                {'items' in selectedItem && (
+                {'items' in selectedItem && 'active' in selectedItem && (
                    <>
                      <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -1734,5 +1762,6 @@ export default function ProductManagementPage() {
       )}
       </Tabs>
     </div>
+  
   );
 }
