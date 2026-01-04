@@ -388,8 +388,17 @@ export default function ProductManagementPage() {
       );
     } else if ('items' in selectedItem && 'active' in selectedItem) {
       // Edit Bundle logic...
+      // Validasi khusus untuk factory bundle
+      if (!bundleForm.isFactoryBundle && !bundleForm.outletId) {
+        alert('Mohon pilih outlet untuk bundle non-pabrik.');
+        return;
+      }
+      
       const validItems = bundleItems.filter(i => (i.isPackage ? i.packageId : i.productId) && i.quantity);
-      if (validItems.length === 0) return;
+      if (validItems.length === 0) {
+        alert('Mohon tambahkan minimal 1 item ke bundle.');
+        return;
+      }
       const items = validItems.map(i => ({
         productId: i.isPackage ? 0 : Number(i.productId),
         packageId: i.isPackage ? Number(i.packageId) : null,
@@ -1160,13 +1169,15 @@ export default function ProductManagementPage() {
                           <Checkbox
                             id="add-factory-bundle"
                             checked={bundleForm.isFactoryBundle}
-                            onCheckedChange={(checked) => 
+                            onCheckedChange={(checked) => {
                               setBundleForm({ 
                                 ...bundleForm, 
                                 isFactoryBundle: checked as boolean,
                                 outletId: checked ? '' : bundleForm.outletId
-                              })
-                            }
+                              });
+                              // Reset bundle items karena list produk/paket berubah
+                              setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+                            }}
                           />
                           <Label htmlFor="add-factory-bundle" className="text-sm font-medium cursor-pointer">
                             Bundle Pabrik (Tersedia untuk semua outlet)
@@ -1567,23 +1578,66 @@ export default function ProductManagementPage() {
                 {/* Edit Bundle Form */}
                 {'items' in selectedItem && 'active' in selectedItem && (
                    <>
-                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-bundle-name">Nama Bundle</Label>
-                        <Input
-                          id="edit-bundle-name"
-                          value={bundleForm.name}
-                          onChange={(e) => setBundleForm({ ...bundleForm, name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Outlet</Label>
-                        <div className="p-3 bg-muted rounded-md">
-                          {getOutletName(bundleForm.outletId)}
-                        </div>
-                      </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="edit-bundle-name">Nama Bundle</Label>
+                      <Input
+                        id="edit-bundle-name"
+                        value={bundleForm.name}
+                        onChange={(e) => setBundleForm({ ...bundleForm, name: e.target.value })}
+                        required
+                      />
                     </div>
+                    
+                    {/* Bundle Pabrik Checkbox di Edit */}
+                    <div className="space-y-3 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="edit-factory-bundle"
+                          checked={bundleForm.isFactoryBundle}
+                          onCheckedChange={(checked) => {
+                            setBundleForm({ 
+                              ...bundleForm, 
+                              isFactoryBundle: checked as boolean,
+                              outletId: checked ? '' : bundleForm.outletId
+                            });
+                            // Reset bundle items karena list produk/paket berubah
+                            setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+                          }}
+                        />
+                        <Label htmlFor="edit-factory-bundle" className="text-sm font-medium cursor-pointer">
+                          Bundle Pabrik (Tersedia untuk semua outlet)
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        💡 Bundle pabrik tidak terikat dengan outlet tertentu dan dapat digunakan di semua outlet
+                      </p>
+                    </div>
+                    
+                    {/* Outlet Selection - Only show if not factory bundle */}
+                    {!bundleForm.isFactoryBundle && outlets && outlets.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-bundle-outlet">Outlet</Label>
+                        <Select 
+                          value={bundleForm.outletId} 
+                          onValueChange={(value) => {
+                            setBundleForm({ ...bundleForm, outletId: value });
+                            setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+                          }}
+                          required={!bundleForm.isFactoryBundle}
+                        >
+                          <SelectTrigger id="edit-bundle-outlet">
+                            <SelectValue placeholder="Pilih outlet" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {outlets.map((outlet) => (
+                              <SelectItem key={outlet.id} value={outlet.id}>
+                                {outlet.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="edit-bundle-price">Harga Bundle (Rp)</Label>
                       <Input
