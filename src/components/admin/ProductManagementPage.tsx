@@ -1695,15 +1695,34 @@ export default function ProductManagementPage() {
                           id="edit-factory-bundle"
                           checked={bundleForm.isFactoryBundle}
                           onCheckedChange={(checked) => {
-                            // PERBAIKAN: Pertahankan outletId saat toggle, kecuali jika menjadi factory bundle
-                            const newOutletId = checked ? '' : (bundleForm.outletId || (outlets && outlets.length > 0 ? outlets[0].id : ''));
+                            // Tentukan outletId yang tepat berdasarkan status checkbox
+                            let newOutletId = '';
+                            
+                            if (checked) {
+                              // Jika diubah menjadi factory bundle, set outletId ke kosong
+                              newOutletId = '';
+                            } else {
+                              // Jika diubah menjadi outlet bundle, pilih outlet yang valid
+                              // Prioritas: bundleForm.outletId (jika valid) > outlet pertama
+                              if (bundleForm.outletId && bundleForm.outletId !== '' && bundleForm.outletId !== 'null') {
+                                // Cek apakah outletId masih valid di list outlets
+                                const isValidOutlet = outlets?.some(o => o.id === bundleForm.outletId);
+                                newOutletId = isValidOutlet ? bundleForm.outletId : (outlets && outlets.length > 0 ? outlets[0].id : '');
+                              } else {
+                                // Jika tidak ada outletId atau tidak valid, ambil outlet pertama
+                                newOutletId = outlets && outlets.length > 0 ? outlets[0].id : '';
+                              }
+                            }
+                            
                             setBundleForm({ 
                               ...bundleForm, 
                               isFactoryBundle: checked as boolean,
                               outletId: newOutletId
                             });
-                            // PERBAIKAN: Tidak mereset bundleItems, biarkan data tetap ada
-                            // User bisa tetap melihat dan mengedit item yang sudah ada
+                            
+                            // Pertahankan bundleItems yang sudah dipilih
+                            // Item akan divalidasi ulang saat dropdown di-render
+                            // User tetap bisa melihat dan mengedit item yang ada
                           }}
                         />
                         <Label htmlFor="edit-factory-bundle" className="text-sm font-medium cursor-pointer">
@@ -1851,9 +1870,14 @@ export default function ProductManagementPage() {
                               <Select
                                 value={item.isPackage ? item.packageId : item.productId}
                                 onValueChange={(value) => updateBundleItem(index, item.isPackage ? 'packageId' : 'productId', value)}
+                                disabled={!bundleForm.isFactoryBundle && !bundleForm.outletId}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder={`Pilih ${item.isPackage ? 'paket' : 'produk'}`} />
+                                  <SelectValue placeholder={
+                                    bundleForm.isFactoryBundle || bundleForm.outletId 
+                                      ? `Pilih ${item.isPackage ? 'paket' : 'produk'}` 
+                                      : "Pilih outlet dulu"
+                                  } />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {item.isPackage 
