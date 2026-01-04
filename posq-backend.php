@@ -1357,13 +1357,16 @@ class posq_Backend {
 
         global $wpdb;
         
+        // Support both imageUrl and image_url for compatibility
+        $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
+        
         // Insert package
         $wpdb->insert($wpdb->prefix . 'posq_packages', [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
             'outlet_id' => (int) $data['outletId'],
             'is_active' => 1,
-            'image_url' => !empty($data['imageUrl']) ? esc_url_raw($data['imageUrl']) : null
+            'image_url' => !empty($image_url) ? esc_url_raw($image_url) : null
         ]);
 
         $package_id = $wpdb->insert_id;
@@ -1390,7 +1393,12 @@ class posq_Backend {
         $update_data = [];
         if (!empty($data['name'])) $update_data['name'] = sanitize_text_field($data['name']);
         if (isset($data['price'])) $update_data['price'] = (int) $data['price'];
-        if (isset($data['imageUrl'])) $update_data['image_url'] = !empty($data['imageUrl']) ? esc_url_raw($data['imageUrl']) : null;
+        
+        // Support both imageUrl and image_url for compatibility
+        if (isset($data['imageUrl']) || isset($data['image_url'])) {
+            $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
+            $update_data['image_url'] = !empty($image_url) ? esc_url_raw($image_url) : null;
+        }
 
         if (!empty($update_data)) {
             $wpdb->update(
@@ -1498,15 +1506,24 @@ class posq_Backend {
             $manual_stock = (int) $data['manualStock'];
         }
         
+        // PERBAIKAN: Handle factory bundle (outletId = null)
+        $outlet_id = null;
+        if (isset($data['outletId']) && $data['outletId'] !== '' && $data['outletId'] !== null && $data['outletId'] !== 'null') {
+            $outlet_id = (int) $data['outletId'];
+        }
+        
+        // Support both imageUrl and image_url for compatibility
+        $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
+        
         // Insert bundle with manual stock fields
         $wpdb->insert($wpdb->prefix . 'posq_bundles', [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
-            'outlet_id' => (int) $data['outletId'],
+            'outlet_id' => $outlet_id,
             'is_active' => 1,
             'manual_stock_enabled' => $manual_stock_enabled,
             'manual_stock' => $manual_stock,
-            'image_url' => !empty($data['imageUrl']) ? esc_url_raw($data['imageUrl']) : null
+            'image_url' => !empty($image_url) ? esc_url_raw($image_url) : null
         ]);
 
         $bundle_id = $wpdb->insert_id;
@@ -1536,6 +1553,15 @@ class posq_Backend {
         if (!empty($data['name'])) $update_data['name'] = sanitize_text_field($data['name']);
         if (isset($data['price'])) $update_data['price'] = (int) $data['price'];
         
+        // PERBAIKAN: Handle outlet_id update (support factory bundle)
+        if (isset($data['outletId'])) {
+            if ($data['outletId'] === '' || $data['outletId'] === null || $data['outletId'] === 'null') {
+                $update_data['outlet_id'] = null;
+            } else {
+                $update_data['outlet_id'] = (int) $data['outletId'];
+            }
+        }
+        
         // PERBAIKAN: Handle manual stock update
         if (isset($data['manualStockEnabled'])) {
             $update_data['manual_stock_enabled'] = !empty($data['manualStockEnabled']) ? 1 : 0;
@@ -1547,6 +1573,12 @@ class posq_Backend {
                 // If disabled, set to null
                 $update_data['manual_stock'] = null;
             }
+        }
+        
+        // Support both imageUrl and image_url for compatibility
+        if (isset($data['imageUrl']) || isset($data['image_url'])) {
+            $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
+            $update_data['image_url'] = !empty($image_url) ? esc_url_raw($image_url) : null;
         }
 
         if (!empty($update_data)) {

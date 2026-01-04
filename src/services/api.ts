@@ -228,6 +228,7 @@ export const api = {
         name: pkg.name,
         price: Number(pkg.price),
         outletId: pkg.outlet_id ? String(pkg.outlet_id) : undefined,
+        image: pkg.image_url || undefined,
         components: (pkg.components || []).map((comp: any) => ({
           productId: String(comp.product_id),
           quantity: Number(comp.quantity),
@@ -273,6 +274,7 @@ export const api = {
         name: bundle.name,
         price: Number(bundle.price),
         outletId: bundle.outlet_id ? String(bundle.outlet_id) : undefined,
+        image: bundle.image_url || undefined,
         items: (bundle.items || []).map((item: any) => ({
           productId: item.product_id ? String(item.product_id) : undefined,
           packageId: item.package_id ? String(item.package_id) : undefined,

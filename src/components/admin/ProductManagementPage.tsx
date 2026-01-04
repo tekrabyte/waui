@@ -263,7 +263,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
-          image_url: productForm.imageUrl || undefined,
+          imageUrl: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -291,13 +291,17 @@ export default function ProductManagementPage() {
           price: Number(packageForm.price),
           outletId: Number(packageForm.outletId),
           components,
-          image_url: packageForm.imageUrl || undefined,
+          imageUrl: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
             setIsAddDialogOpen(false);
             resetForms();
           },
+          onError: (err) => {
+            console.error(err);
+            alert("Gagal menambah paket. Periksa koneksi atau data yang diinput.");
+          }
         }
       );
     } else if (activeTab === 'bundles') {
@@ -325,7 +329,7 @@ export default function ProductManagementPage() {
         price: Number(bundleForm.price),
         outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
-        image_url: bundleForm.imageUrl || undefined,
+        imageUrl: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -368,7 +372,7 @@ export default function ProductManagementPage() {
           name: packageForm.name,
           price: Number(packageForm.price),
           components,
-          image_url: packageForm.imageUrl || undefined,
+          imageUrl: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -376,6 +380,10 @@ export default function ProductManagementPage() {
             setSelectedItem(null);
             resetForms();
           },
+          onError: (err) => {
+            console.error(err);
+            alert("Gagal update paket. Periksa koneksi atau data yang diinput.");
+          }
         }
       );
     } else if ('items' in selectedItem && 'active' in selectedItem) {
@@ -395,7 +403,7 @@ export default function ProductManagementPage() {
         price: Number(bundleForm.price),
         outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
-        image_url: bundleForm.imageUrl || undefined,
+        imageUrl: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -415,6 +423,10 @@ export default function ProductManagementPage() {
             setSelectedItem(null);
             resetForms();
           },
+          onError: (err) => {
+            console.error(err);
+            alert("Gagal update bundle. Periksa koneksi atau data yang diinput.");
+          }
         }
       );
     } else {
@@ -428,7 +440,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
-          image_url: productForm.imageUrl || undefined,
+          imageUrl: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -436,6 +448,10 @@ export default function ProductManagementPage() {
             setSelectedItem(null);
             resetForms();
           },
+          onError: (err) => {
+            console.error(err);
+            alert("Gagal update produk. Periksa koneksi atau data yang diinput.");
+          }
         }
       );
     }
