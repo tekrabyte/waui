@@ -122,7 +122,7 @@ class posq_Backend {
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             name varchar(255) NOT NULL,
             price bigint(20) NOT NULL,
-            outlet_id bigint(20) UNSIGNED NOT NULL,
+            outlet_id bigint(20) UNSIGNED NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             is_active tinyint(1) DEFAULT 1,
             manual_stock_enabled tinyint(1) DEFAULT 0,
@@ -253,6 +253,9 @@ class posq_Backend {
 
         // Insert default menu access config
         self::insert_default_menu_access();
+
+        // Migration: Allow NULL for outlet_id in posq_bundles to support factory bundles
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}posq_bundles MODIFY COLUMN outlet_id bigint(20) UNSIGNED NULL");
 
         update_option('posq_db_version', self::DB_VERSION);
     }
@@ -1516,7 +1519,7 @@ class posq_Backend {
         $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
         
         // Insert bundle with manual stock fields
-        $wpdb->insert($wpdb->prefix . 'posq_bundles', [
+        $result = $wpdb->insert($wpdb->prefix . 'posq_bundles', [
             'name' => sanitize_text_field($data['name']),
             'price' => (int) $data['price'],
             'outlet_id' => $outlet_id,
@@ -1526,17 +1529,32 @@ class posq_Backend {
             'image_url' => !empty($image_url) ? esc_url_raw($image_url) : null
         ]);
 
+        if ($result === false) {
+            error_log('Failed to insert bundle: ' . $wpdb->last_error);
+            return new WP_Error('db_insert_error', 'Failed to create bundle: ' . $wpdb->last_error, ['status' => 500]);
+        }
+
         $bundle_id = $wpdb->insert_id;
+
+        if (!$bundle_id) {
+            error_log('Failed to get bundle ID after insert');
+            return new WP_Error('db_insert_error', 'Failed to get bundle ID', ['status' => 500]);
+        }
 
         // Insert items
         foreach ($data['items'] as $item) {
-            $wpdb->insert($wpdb->prefix . 'posq_bundle_items', [
+            $item_result = $wpdb->insert($wpdb->prefix . 'posq_bundle_items', [
                 'bundle_id' => $bundle_id,
                 'product_id' => !empty($item['productId']) ? (int) $item['productId'] : null,
                 'package_id' => !empty($item['packageId']) ? (int) $item['packageId'] : null,
                 'quantity' => (int) $item['quantity'],
                 'is_package' => !empty($item['isPackage']) ? 1 : 0
             ]);
+
+            if ($item_result === false) {
+                error_log('Failed to insert bundle item: ' . $wpdb->last_error);
+                // Continue with other items instead of failing completely
+            }
         }
 
         return ['success' => true, 'id' => $bundle_id];
@@ -1582,28 +1600,42 @@ class posq_Backend {
         }
 
         if (!empty($update_data)) {
-            $wpdb->update(
+            $result = $wpdb->update(
                 $wpdb->prefix . 'posq_bundles',
                 $update_data,
                 ['id' => $id]
             );
+
+            if ($result === false) {
+                error_log('Failed to update bundle: ' . $wpdb->last_error);
+                return new WP_Error('db_update_error', 'Failed to update bundle: ' . $wpdb->last_error, ['status' => 500]);
+            }
         }
 
         // Update items if provided
         if (isset($data['items'])) {
             // Delete old items
-            $wpdb->delete($wpdb->prefix . 'posq_bundle_items', ['bundle_id' => $id]);
+            $delete_result = $wpdb->delete($wpdb->prefix . 'posq_bundle_items', ['bundle_id' => $id]);
+            
+            if ($delete_result === false) {
+                error_log('Failed to delete old bundle items: ' . $wpdb->last_error);
+            }
 
             // Insert new items
             foreach ($data['items'] as $item) {
-                $wpdb->insert($wpdb->prefix . 'posq_bundle_items', [
+                $item_result = $wpdb->insert($wpdb->prefix . 'posq_bundle_items', [
                     'bundle_id' => $id,
                     'product_id' => !empty($item['productId']) ? (int) $item['productId'] : null,
                     'package_id' => !empty($item['packageId']) ? (int) $item['packageId'] : null,
                     'quantity' => (int) $item['quantity'],
                     'is_package' => !empty($item['isPackage']) ? 1 : 0
                 ]);
+
+                if ($item_result === false) {
+                    error_log('Failed to insert bundle item during update: ' . $wpdb->last_error);
+                }
             }
+            
         }
 
         return ['success' => true];
