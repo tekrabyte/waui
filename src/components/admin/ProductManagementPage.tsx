@@ -263,7 +263,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
-          imageUrl: productForm.imageUrl || undefined,
+          image_url: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -291,7 +291,7 @@ export default function ProductManagementPage() {
           price: Number(packageForm.price),
           outletId: Number(packageForm.outletId),
           components,
-          imageUrl: packageForm.imageUrl || undefined,
+          image_url: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -329,7 +329,7 @@ export default function ProductManagementPage() {
         price: Number(bundleForm.price),
         outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
-        imageUrl: bundleForm.imageUrl || undefined,
+        image_url: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -372,7 +372,7 @@ export default function ProductManagementPage() {
           name: packageForm.name,
           price: Number(packageForm.price),
           components,
-          imageUrl: packageForm.imageUrl || undefined,
+          image_url: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {

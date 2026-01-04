@@ -41,17 +41,30 @@ export function ImageUpload({
     }
 
     setIsUploading(true);
+    console.log('[ImageUpload] Starting upload for file:', file.name, 'Size:', file.size);
+    
     try {
       const result = await api.images.upload(file);
+      console.log('[ImageUpload] Upload result:', result);
+      
       if (result.success && result.url) {
         onChange(result.url);
         toast.success('Gambar berhasil diupload');
+        console.log('[ImageUpload] Upload successful, URL:', result.url);
       } else {
-        toast.error('Gagal mengupload gambar');
+        console.error('[ImageUpload] Upload failed - no URL in response:', result);
+        toast.error('Gagal mengupload gambar - tidak ada URL');
       }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Gagal mengupload gambar');
+    } catch (error: any) {
+      console.error('[ImageUpload] Upload error:', error);
+      console.error('[ImageUpload] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      const errorMessage = error.message || 'Gagal mengupload gambar';
+      toast.error(`Upload gagal: ${errorMessage}`);
     } finally {
       setIsUploading(false);
       // Reset input file

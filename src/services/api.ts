@@ -597,18 +597,33 @@ export const api = {
   images: {
     upload: async (file: File) => {
       const token = localStorage.getItem('posq_token');
+      console.log('[API] Starting image upload:', {
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+        hasToken: !!token
+      });
+      
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch(`${BASE_URL}/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
-        body: formData,
-      });
+      try {
+        const response = await fetch(`${BASE_URL}/upload-image`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+          },
+          body: formData,
+        });
 
-      return handleResponse(response);
+        console.log('[API] Upload response status:', response.status);
+        const result = await handleResponse(response);
+        console.log('[API] Upload success:', result);
+        return result;
+      } catch (error) {
+        console.error('[API] Upload fetch error:', error);
+        throw error;
+      }
     }
   },
 };
