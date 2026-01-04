@@ -77,6 +77,9 @@ export default function ProductManagementPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Product | ProductPackage | Bundle | null>(null);
+  
+  // Filter state
+  const [selectedOutletFilter, setSelectedOutletFilter] = useState<string>('all');
 
   // Product form
   const [productForm, setProductForm] = useState({
@@ -142,6 +145,36 @@ export default function ProductManagementPage() {
     });
   }, [bundles, products, packages]);
 
+  // PERBAIKAN: Filter produk, paket, dan bundle berdasarkan outlet yang dipilih
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    if (selectedOutletFilter === 'all') return products;
+    if (selectedOutletFilter === 'factory') return products.filter(p => !p.outletId || p.outletId === '' || p.outletId === 'null');
+    return products.filter(p => String(p.outletId) === selectedOutletFilter);
+  }, [products, selectedOutletFilter]);
+
+  const filteredPackages = useMemo(() => {
+    if (!packagesWithStock) return [];
+    if (selectedOutletFilter === 'all') return packagesWithStock;
+    if (selectedOutletFilter === 'factory') return packagesWithStock.filter(p => !p.outletId || p.outletId === '' || p.outletId === 'null');
+    return packagesWithStock.filter(p => String(p.outletId) === selectedOutletFilter);
+  }, [packagesWithStock, selectedOutletFilter]);
+
+  const filteredBundles = useMemo(() => {
+    if (!bundlesWithStock) return [];
+    if (selectedOutletFilter === 'all') return bundlesWithStock;
+    if (selectedOutletFilter === 'factory') {
+      return bundlesWithStock.filter(b => {
+        const rawOutletId = (b as any).outlet_id || b.outletId;
+        return !rawOutletId || rawOutletId === '' || rawOutletId === 'null' || rawOutletId === null;
+      });
+    }
+    return bundlesWithStock.filter(b => {
+      const rawOutletId = (b as any).outlet_id || b.outletId;
+      return String(rawOutletId) === selectedOutletFilter;
+    });
+  }, [bundlesWithStock, selectedOutletFilter]);
+
   const resetForms = () => {
     setProductForm({ 
       name: '', 
@@ -203,11 +236,15 @@ export default function ProductManagementPage() {
       
     } else if ('items' in item && 'active' in item) { 
       // It's a bundle
-      const isFactory = !item.outletId || item.outletId === '' || item.outletId === 'null';
+      // PERBAIKAN BUG: Cek dengan lebih teliti apakah bundle ini factory bundle
+      // Dari API, outlet_id bisa null, undefined, '', atau 'null' untuk factory bundle
+      const rawOutletId = (item as any).outlet_id || (item as any).outletId;
+      const isFactory = !rawOutletId || rawOutletId === '' || rawOutletId === 'null' || rawOutletId === null || rawOutletId === undefined;
+      
       setBundleForm({
         name: item.name,
         price: String(item.price || 0),
-        outletId: isFactory ? '' : String(item.outletId),
+        outletId: isFactory ? '' : String(rawOutletId),
         isFactoryBundle: isFactory,
         manualStockEnabled: item.manualStockEnabled || false,
         manualStock: item.manualStock ? String(item.manualStock) : '',
@@ -558,6 +595,42 @@ export default function ProductManagementPage() {
         </Alert>
       )}
 
+      {/* PERBAIKAN: Filter outlet untuk owner */}
+      {isOwner && outlets && outlets.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <Label htmlFor="outlet-filter" className="whitespace-nowrap font-semibold">
+                Filter berdasarkan Outlet:
+              </Label>
+              <Select value={selectedOutletFilter} onValueChange={setSelectedOutletFilter}>
+                <SelectTrigger id="outlet-filter" className="w-[300px]">
+                  <SelectValue placeholder="Pilih outlet" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Outlet</SelectItem>
+                  <SelectItem value="factory">Bundle Pabrik Saja</SelectItem>
+                  {outlets.map((outlet) => (
+                    <SelectItem key={outlet.id} value={outlet.id}>
+                      {outlet.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedOutletFilter !== 'all' && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedOutletFilter('all')}
+                >
+                  Reset Filter
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="products">
@@ -604,6 +677,14 @@ export default function ProductManagementPage() {
                     </Button>
                   )}
                 </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-semibold">Tidak ada produk untuk outlet ini</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Coba ubah filter outlet atau tambahkan produk baru
+                  </p>
+                </div>
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -620,7 +701,7 @@ export default function ProductManagementPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {products.map((product) => (
+                      {filteredProducts.map((product) => (
                         <TableRow key={product.id}>
                           <TableCell>
                             {product.image ? (
@@ -720,6 +801,14 @@ export default function ProductManagementPage() {
                     </Button>
                   )}
                 </div>
+              ) : filteredPackages.length === 0 ? (
+                <div className="text-center py-12">
+                  <PackagePlus className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-semibold">Tidak ada paket untuk outlet ini</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Coba ubah filter outlet atau tambahkan paket baru
+                  </p>
+                </div>
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -735,7 +824,7 @@ export default function ProductManagementPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {packagesWithStock.map((pkg) => (
+                      {filteredPackages.map((pkg) => (
                         <TableRow key={pkg.id}>
                           <TableCell>
                             {pkg.image ? (
@@ -819,6 +908,14 @@ export default function ProductManagementPage() {
                     </Button>
                   )}
                 </div>
+              ) : filteredBundles.length === 0 ? (
+                <div className="text-center py-12">
+                  <Layers className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-semibold">Tidak ada bundle untuk outlet ini</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Coba ubah filter outlet atau tambahkan bundle baru
+                  </p>
+                </div>
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -835,7 +932,7 @@ export default function ProductManagementPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bundlesWithStock.map((bundle) => (
+                      {filteredBundles.map((bundle) => (
                         <TableRow key={bundle.id}>
                           <TableCell>
                             {bundle.image ? (
