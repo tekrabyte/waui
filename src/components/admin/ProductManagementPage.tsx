@@ -523,7 +523,10 @@ export default function ProductManagementPage() {
   };
 
   const getOutletName = (outletId?: string | null) => {
-    if (!outletId) return '-';
+    // PERBAIKAN: Tampilkan "Stok Pabrik" untuk bundle/paket tanpa outlet
+    if (!outletId || outletId === '' || outletId === 'null' || outletId === 'undefined') {
+      return 'Stok Pabrik';
+    }
     const outlet = outlets?.find(o => o.id === outletId.toString());
     return outlet?.name || `Outlet #${outletId}`;
   };
