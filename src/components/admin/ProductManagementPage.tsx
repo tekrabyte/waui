@@ -499,13 +499,17 @@ export default function ProductManagementPage() {
     return product?.name || `Produk #${productId}`;
   };
 
-  const getAvailableProducts = (currentOutletId: string) => {
+  const getAvailableProducts = (currentOutletId: string, isFactoryBundle: boolean = false) => {
     if (!products) return [];
+    // PERBAIKAN: Jika bundle pabrik, tampilkan semua produk tanpa filter outlet
+    if (isFactoryBundle) return products;
     return products.filter(p => String(p.outletId) === String(currentOutletId));
   };
 
-  const getAvailablePackages = (currentOutletId: string) => {
+  const getAvailablePackages = (currentOutletId: string, isFactoryBundle: boolean = false) => {
     if (!packages) return [];
+    // PERBAIKAN: Jika bundle pabrik, tampilkan semua paket tanpa filter outlet
+    if (isFactoryBundle) return packages.filter(p => p.isActive);
     return packages.filter(p => String(p.outletId) === String(currentOutletId) && p.isActive);
   };
 
@@ -1288,12 +1292,12 @@ export default function ProductManagementPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {item.isPackage 
-                                    ? getAvailablePackages(bundleForm.outletId).map((pkg) => (
+                                    ? getAvailablePackages(bundleForm.outletId, bundleForm.isFactoryBundle).map((pkg) => (
                                         <SelectItem key={pkg.id} value={pkg.id}>
                                           {pkg.name}
                                         </SelectItem>
                                       ))
-                                    : getAvailableProducts(bundleForm.outletId).map((product) => (
+                                    : getAvailableProducts(bundleForm.outletId, bundleForm.isFactoryBundle).map((product) => (
                                         <SelectItem key={product.id} value={product.id}>
                                           {product.name} (Stok: {product.stock})
                                         </SelectItem>
@@ -1696,12 +1700,12 @@ export default function ProductManagementPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {item.isPackage 
-                                    ? getAvailablePackages(bundleForm.outletId).map((pkg) => (
+                                    ? getAvailablePackages(bundleForm.outletId, bundleForm.isFactoryBundle).map((pkg) => (
                                         <SelectItem key={pkg.id} value={pkg.id}>
                                           {pkg.name}
                                         </SelectItem>
                                       ))
-                                    : getAvailableProducts(bundleForm.outletId).map((product) => (
+                                    : getAvailableProducts(bundleForm.outletId, bundleForm.isFactoryBundle).map((product) => (
                                         <SelectItem key={product.id} value={product.id}>
                                           {product.name} (Stok: {product.stock})
                                         </SelectItem>
