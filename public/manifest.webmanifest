@@ -1,0 +1,10 @@
+{
+  "name": "WhatsApp Clone POS PWA",
+  "short_name": "POS PWA",
+  "description": "Point of Sale Progressive Web App",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00a884",
+  "icons": []
+}
