@@ -263,7 +263,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
-          imageUrl: productForm.imageUrl || undefined,
+          image_url: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -291,7 +291,7 @@ export default function ProductManagementPage() {
           price: Number(packageForm.price),
           outletId: Number(packageForm.outletId),
           components,
-          imageUrl: packageForm.imageUrl || undefined,
+          image_url: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -301,8 +301,17 @@ export default function ProductManagementPage() {
         }
       );
     } else if (activeTab === 'bundles') {
+      // PERBAIKAN: Validasi khusus untuk factory bundle
+      if (!bundleForm.isFactoryBundle && !bundleForm.outletId) {
+        alert('Mohon pilih outlet untuk bundle non-pabrik.');
+        return;
+      }
+
       const validItems = bundleItems.filter(i => (i.isPackage ? i.packageId : i.productId) && i.quantity);
-      if (validItems.length === 0) return;
+      if (validItems.length === 0) {
+        alert('Mohon tambahkan minimal 1 item ke bundle.');
+        return;
+      }
 
       const items = validItems.map(i => ({
         productId: i.isPackage ? 0 : Number(i.productId),
@@ -316,7 +325,7 @@ export default function ProductManagementPage() {
         price: Number(bundleForm.price),
         outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
-        imageUrl: bundleForm.imageUrl || undefined,
+        image_url: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -332,6 +341,10 @@ export default function ProductManagementPage() {
             setIsAddDialogOpen(false);
             resetForms();
           },
+          onError: (err) => {
+            console.error(err);
+            alert("Gagal menambah bundle. Periksa koneksi atau data yang diinput.");
+          }
         }
       );
     }
@@ -355,7 +368,7 @@ export default function ProductManagementPage() {
           name: packageForm.name,
           price: Number(packageForm.price),
           components,
-          imageUrl: packageForm.imageUrl || undefined,
+          image_url: packageForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -382,7 +395,7 @@ export default function ProductManagementPage() {
         price: Number(bundleForm.price),
         outletId: bundleForm.isFactoryBundle ? null : Number(bundleForm.outletId),
         items,
-        imageUrl: bundleForm.imageUrl || undefined,
+        image_url: bundleForm.imageUrl || undefined,
       };
 
       // Add manual stock if enabled
@@ -415,7 +428,7 @@ export default function ProductManagementPage() {
           outletId: productForm.outletId ? String(productForm.outletId) : null,
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
-          imageUrl: productForm.imageUrl || undefined,
+          image_url: productForm.imageUrl || undefined,
         },
         {
           onSuccess: () => {
@@ -1248,10 +1261,14 @@ export default function ProductManagementPage() {
                               <Select
                                 value={item.isPackage ? item.packageId : item.productId}
                                 onValueChange={(value) => updateBundleItem(index, item.isPackage ? 'packageId' : 'productId', value)}
-                                disabled={!bundleForm.outletId}
+                                disabled={!bundleForm.isFactoryBundle && !bundleForm.outletId}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder={bundleForm.outletId ? `Pilih ${item.isPackage ? 'paket' : 'produk'}` : "Pilih outlet dulu"} />
+                                  <SelectValue placeholder={
+                                    bundleForm.isFactoryBundle || bundleForm.outletId 
+                                      ? `Pilih ${item.isPackage ? 'paket' : 'produk'}` 
+                                      : "Pilih outlet dulu"
+                                  } />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {item.isPackage 
