@@ -1695,13 +1695,15 @@ export default function ProductManagementPage() {
                           id="edit-factory-bundle"
                           checked={bundleForm.isFactoryBundle}
                           onCheckedChange={(checked) => {
+                            // PERBAIKAN: Pertahankan outletId saat toggle, kecuali jika menjadi factory bundle
+                            const newOutletId = checked ? '' : (bundleForm.outletId || (outlets && outlets.length > 0 ? outlets[0].id : ''));
                             setBundleForm({ 
                               ...bundleForm, 
                               isFactoryBundle: checked as boolean,
-                              outletId: checked ? '' : bundleForm.outletId
+                              outletId: newOutletId
                             });
-                            // Reset bundle items karena list produk/paket berubah
-                            setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+                            // PERBAIKAN: Tidak mereset bundleItems, biarkan data tetap ada
+                            // User bisa tetap melihat dan mengedit item yang sudah ada
                           }}
                         />
                         <Label htmlFor="edit-factory-bundle" className="text-sm font-medium cursor-pointer">
@@ -1721,7 +1723,8 @@ export default function ProductManagementPage() {
                           value={bundleForm.outletId} 
                           onValueChange={(value) => {
                             setBundleForm({ ...bundleForm, outletId: value });
-                            setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+                            // PERBAIKAN: Tidak mereset bundleItems, pertahankan data yang sudah ada
+                            // List produk/paket akan otomatis ter-filter berdasarkan outlet baru
                           }}
                           required={!bundleForm.isFactoryBundle}
                         >
