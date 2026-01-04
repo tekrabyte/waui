@@ -130,9 +130,12 @@ export const useListProductsByOutlet = (outletId?: string) =>
           price: Number(p.price),
           stock: Number(p.stock ?? 0),
           available: !!p.available,
+          image: p.image || p.image_url || undefined,
           outletId: p.outletId,
           category: p.category,
           brand: p.brand,
+          categoryId: p.categoryId || p.category_id,
+          brandId: p.brandId || p.brand_id,
         }));
     },
   });
@@ -288,6 +291,7 @@ export const useListActiveBundles = (outletId?: string | null) =>
           name: b.name,
           price: Number(b.price),
           items: b.items ?? [],
+          image: b.image || b.image_url || undefined,
           outletId: String(b.outletId || b.outlet_id),
           active: b.active !== false && b.isActive !== false,
           manualStockEnabled: b.manualStockEnabled || b.manual_stock_enabled || false,
@@ -529,6 +533,7 @@ export const useListActivePackages = (outletId?: string | null) =>
           price: Number(p.price),
           components: p.components || p.items || [],
           items: p.items || p.components || [],
+          image: p.image || p.image_url || undefined,
           outletId: String(p.outletId || p.outlet_id),
           isActive: p.isActive !== false && p.is_active !== false,
           manualStockEnabled: p.manualStockEnabled || p.manual_stock_enabled || false,
@@ -678,3 +683,4 @@ export const useCreateUser = () => {
   });
 };
 
+    
