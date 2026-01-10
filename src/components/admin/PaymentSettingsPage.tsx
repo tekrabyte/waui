@@ -1,96 +1,796 @@
-import React, { useState, useEffect } from 'react';
-import { PaymentMethod } from '../../types/types';
-import { api } from '../../services/api';
-import { CreditCard, Smartphone, Banknote, QrCode } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Banknote, 
+  QrCode, 
+  Building2, 
+  UtensilsCrossed, 
+  Plus, 
+  Trash2, 
+  Upload,
+  Save,
+  Settings,
+  CreditCard,
+  Smartphone,
+  Image as ImageIcon
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+interface PaymentMethodConfig {
+  id: string;
+  name: string;
+  category: 'offline' | 'online' | 'foodDelivery';
+  subCategory?: string;
+  enabled: boolean;
+  icon: any;
+  color: string;
+  isDefault: boolean;
+  fee?: number;
+  config?: {
+    qrisImage?: string;
+    merchantName?: string;
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+  };
+}
+
+const defaultPaymentMethods: PaymentMethodConfig[] = [
+  {
+    id: 'cash',
+    name: 'Cash',
+    category: 'offline',
+    subCategory: 'cash',
+    enabled: true,
+    icon: Banknote,
+    color: 'bg-green-500',
+    isDefault: true,
+    fee: 0
+  },
+  {
+    id: 'qris-static',
+    name: 'QRIS Statis',
+    category: 'online',
+    subCategory: 'qris',
+    enabled: false,
+    icon: QrCode,
+    color: 'bg-blue-500',
+    isDefault: true,
+    fee: 0.7,
+    config: {}
+  },
+  {
+    id: 'bank-transfer',
+    name: 'Transfer Bank',
+    category: 'online',
+    subCategory: 'transfer',
+    enabled: false,
+    icon: Building2,
+    color: 'bg-purple-500',
+    isDefault: true,
+    fee: 0,
+    config: {}
+  },
+  {
+    id: 'debit',
+    name: 'Kartu Debit',
+    category: 'offline',
+    subCategory: 'debit',
+    enabled: false,
+    icon: CreditCard,
+    color: 'bg-indigo-500',
+    isDefault: true,
+    fee: 1.5
+  },
+  {
+    id: 'credit',
+    name: 'Kartu Kredit',
+    category: 'offline',
+    subCategory: 'credit',
+    enabled: false,
+    icon: CreditCard,
+    color: 'bg-pink-500',
+    isDefault: true,
+    fee: 2.5
+  },
+  {
+    id: 'ewallet',
+    name: 'E-Wallet',
+    category: 'online',
+    subCategory: 'eWallet',
+    enabled: false,
+    icon: Smartphone,
+    color: 'bg-teal-500',
+    isDefault: true,
+    fee: 1.0
+  },
+  {
+    id: 'gofood',
+    name: 'GoFood',
+    category: 'foodDelivery',
+    subCategory: 'goFood',
+    enabled: false,
+    icon: UtensilsCrossed,
+    color: 'bg-green-600',
+    isDefault: true,
+    fee: 20
+  },
+  {
+    id: 'grabfood',
+    name: 'GrabFood',
+    category: 'foodDelivery',
+    subCategory: 'grabFood',
+    enabled: false,
+    icon: UtensilsCrossed,
+    color: 'bg-emerald-600',
+    isDefault: true,
+    fee: 20
+  },
+  {
+    id: 'shopeefood',
+    name: 'ShopeeFood',
+    category: 'foodDelivery',
+    subCategory: 'shopeeFood',
+    enabled: false,
+    icon: UtensilsCrossed,
+    color: 'bg-orange-600',
+    isDefault: true,
+    fee: 20
+  }
+];
 
 export default function PaymentSettingsPage() {
-  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodConfig | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  
+  // Form states for QRIS
+  const [qrisImage, setQrisImage] = useState<string>('');
+  const [qrisMerchantName, setQrisMerchantName] = useState('');
+  const [qrisImageFile, setQrisImageFile] = useState<File | null>(null);
+  
+  // Form states for Bank Transfer
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+
+  // Form states for custom method
+  const [customName, setCustomName] = useState('');
+  const [customCategory, setCustomCategory] = useState<'offline' | 'online' | 'foodDelivery'>('offline');
+  const [customFee, setCustomFee] = useState('0');
 
   useEffect(() => {
-    loadPayments();
+    loadPaymentMethods();
   }, []);
 
-  const loadPayments = async () => {
+  const loadPaymentMethods = () => {
     try {
-      setIsLoading(true);
-      const data = await api.payments.getAll();
-      setMethods(data);
-    } catch (err) {
-      console.error('Failed to load payments', err);
+      const saved = localStorage.getItem('payment_methods_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Merge with defaults to ensure new methods are added
+        const merged = defaultPaymentMethods.map(defaultMethod => {
+          const savedMethod = parsed.find((m: PaymentMethodConfig) => m.id === defaultMethod.id);
+          return savedMethod ? { ...defaultMethod, ...savedMethod } : defaultMethod;
+        });
+        // Add custom methods
+        const customMethods = parsed.filter((m: PaymentMethodConfig) => !m.isDefault);
+        setPaymentMethods([...merged, ...customMethods]);
+      } else {
+        setPaymentMethods(defaultPaymentMethods);
+      }
+    } catch (error) {
+      console.error('Failed to load payment methods:', error);
+      setPaymentMethods(defaultPaymentMethods);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleMethod = async (id: string) => {
-    // Cari status saat ini
-    const method = methods.find(m => m.id === id);
-    if (!method) return;
+  const savePaymentMethods = (methods: PaymentMethodConfig[]) => {
+    localStorage.setItem('payment_methods_config', JSON.stringify(methods));
+    setPaymentMethods(methods);
+    toast.success('Pengaturan pembayaran berhasil disimpan');
+  };
 
-    // Optimistic Update (ubah tampilan dulu agar responsif)
-    setMethods(prev => prev.map(m => m.id === id ? { ...m, enabled: !m.enabled } : m));
+  const toggleMethod = (id: string) => {
+    const updated = paymentMethods.map(m => 
+      m.id === id ? { ...m, enabled: !m.enabled } : m
+    );
+    savePaymentMethods(updated);
+  };
 
-    try {
-      // Kirim ke backend
-      await api.payments.toggle(id, !method.enabled);
-    } catch (err) {
-      // Kembalikan jika gagal
-      alert('Failed to update payment method');
-      setMethods(prev => prev.map(m => m.id === id ? { ...m, enabled: method.enabled } : m));
+  const openConfigDialog = (method: PaymentMethodConfig) => {
+    setSelectedMethod(method);
+    
+    // Load existing config
+    if (method.id === 'qris-static' && method.config) {
+      setQrisImage(method.config.qrisImage || '');
+      setQrisMerchantName(method.config.merchantName || '');
+    } else if (method.id === 'bank-transfer' && method.config) {
+      setBankName(method.config.bankName || '');
+      setAccountNumber(method.config.accountNumber || '');
+      setAccountName(method.config.accountName || '');
+    }
+    
+    setIsDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('File harus berupa gambar');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    setQrisImageFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setQrisImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveMethodConfig = () => {
+    if (!selectedMethod) return;
+
+    const updated = paymentMethods.map(m => {
+      if (m.id === selectedMethod.id) {
+        if (m.id === 'qris-static') {
+          return {
+            ...m,
+            config: {
+              ...m.config,
+              qrisImage,
+              merchantName: qrisMerchantName
+            }
+          };
+        } else if (m.id === 'bank-transfer') {
+          return {
+            ...m,
+            config: {
+              ...m.config,
+              bankName,
+              accountNumber,
+              accountName
+            }
+          };
+        }
+      }
+      return m;
+    });
+
+    savePaymentMethods(updated);
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const addCustomMethod = () => {
+    if (!customName.trim()) {
+      toast.error('Nama metode pembayaran harus diisi');
+      return;
+    }
+
+    const newMethod: PaymentMethodConfig = {
+      id: `custom-${Date.now()}`,
+      name: customName,
+      category: customCategory,
+      enabled: true,
+      icon: CreditCard,
+      color: 'bg-gray-500',
+      isDefault: false,
+      fee: parseFloat(customFee) || 0
+    };
+
+    savePaymentMethods([...paymentMethods, newMethod]);
+    setIsAddDialogOpen(false);
+    resetForm();
+  };
+
+  const deleteCustomMethod = (id: string) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus metode pembayaran ini?')) {
+      const updated = paymentMethods.filter(m => m.id !== id);
+      savePaymentMethods(updated);
     }
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'cash': return Banknote;
-      case 'card': return CreditCard;
-      case 'ewallet': return Smartphone;
-      case 'qr': return QrCode;
-      default: return Banknote;
+  const resetForm = () => {
+    setQrisImage('');
+    setQrisMerchantName('');
+    setQrisImageFile(null);
+    setBankName('');
+    setAccountNumber('');
+    setAccountName('');
+    setCustomName('');
+    setCustomCategory('offline');
+    setCustomFee('0');
+  };
+
+  const getCategoryBadge = (category: string) => {
+    switch (category) {
+      case 'offline':
+        return <Badge variant="secondary">Offline</Badge>;
+      case 'online':
+        return <Badge variant="default" className="bg-blue-500">Online</Badge>;
+      case 'foodDelivery':
+        return <Badge variant="default" className="bg-orange-500">Food Delivery</Badge>;
+      default:
+        return null;
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center">Loading payment settings...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Settings className="h-12 w-12 animate-spin mx-auto text-gray-400" />
+          <p className="mt-4 text-gray-500">Memuat pengaturan pembayaran...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const offlineMethods = paymentMethods.filter(m => m.category === 'offline');
+  const onlineMethods = paymentMethods.filter(m => m.category === 'online');
+  const foodDeliveryMethods = paymentMethods.filter(m => m.category === 'foodDelivery');
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payment Methods</h1>
-          <p className="text-gray-500">Configure accepted payment options</p>
+          <h1 className="text-3xl font-bold tracking-tight">Pengaturan Pembayaran</h1>
+          <p className="text-muted-foreground">
+            Kelola metode pembayaran yang tersedia di sistem POS Anda
+          </p>
         </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2" data-testid="add-payment-method-button">
+              <Plus className="h-4 w-4" />
+              Tambah Manual
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Metode Pembayaran</DialogTitle>
+              <DialogDescription>
+                Buat metode pembayaran kustom sesuai kebutuhan Anda
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-name">Nama Metode Pembayaran</Label>
+                <Input
+                  id="custom-name"
+                  placeholder="Contoh: OVO, DANA, dll"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  data-testid="custom-method-name-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="custom-category">Kategori</Label>
+                <Select value={customCategory} onValueChange={(v: any) => setCustomCategory(v)}>
+                  <SelectTrigger id="custom-category" data-testid="custom-category-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="offline">Offline</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="foodDelivery">Food Delivery</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="custom-fee">Biaya Transaksi (%)</Label>
+                <Input
+                  id="custom-fee"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="0"
+                  value={customFee}
+                  onChange={(e) => setCustomFee(e.target.value)}
+                  data-testid="custom-fee-input"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={addCustomMethod} data-testid="save-custom-method-button">
+                Simpan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {methods.length === 0 ? (
-          <div className="col-span-2 text-center py-8 text-gray-500">No payment methods found.</div>
-        ) : (
-          methods.map(method => {
-            const Icon = getIcon(method.type);
-            return (
-              <div key={method.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600">
-                    <Icon size={24} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900">{method.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Fee: {method.transactionFee}%
-                    </p>
-                  </div>
-                </div>
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Metode</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{paymentMethods.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {paymentMethods.filter(m => m.enabled).length} aktif
+            </p>
+          </CardContent>
+        </Card>
 
-                <button 
-                  onClick={() => toggleMethod(method.id)} 
-                  className={`w-12 h-6 rounded-full p-1 transition-colors ${method.enabled ? 'bg-[#25D366]' : 'bg-gray-300'}`}
-                >
-                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${method.enabled ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Metode Default</CardTitle>
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{paymentMethods.filter(m => m.isDefault).length}</div>
+            <p className="text-xs text-muted-foreground">
+              Metode bawaan sistem
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Metode Kustom</CardTitle>
+            <Plus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{paymentMethods.filter(m => !m.isDefault).length}</div>
+            <p className="text-xs text-muted-foreground">
+              Dibuat manual
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Payment Methods Tabs */}
+      <Tabs defaultValue="offline" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="offline" data-testid="offline-tab">
+            <Banknote className="h-4 w-4 mr-2" />
+            Offline ({offlineMethods.length})
+          </TabsTrigger>
+          <TabsTrigger value="online" data-testid="online-tab">
+            <QrCode className="h-4 w-4 mr-2" />
+            Online ({onlineMethods.length})
+          </TabsTrigger>
+          <TabsTrigger value="foodDelivery" data-testid="food-delivery-tab">
+            <UtensilsCrossed className="h-4 w-4 mr-2" />
+            Food Delivery ({foodDeliveryMethods.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="offline" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Metode Pembayaran Offline</CardTitle>
+              <CardDescription>
+                Metode pembayaran yang dilakukan secara langsung di outlet
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {offlineMethods.map((method) => (
+                  <PaymentMethodCard
+                    key={method.id}
+                    method={method}
+                    onToggle={toggleMethod}
+                    onConfigure={openConfigDialog}
+                    onDelete={deleteCustomMethod}
+                    getCategoryBadge={getCategoryBadge}
+                  />
+                ))}
               </div>
-            );
-          })
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="online" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Metode Pembayaran Online</CardTitle>
+              <CardDescription>
+                Metode pembayaran digital dan elektronik
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {onlineMethods.map((method) => (
+                  <PaymentMethodCard
+                    key={method.id}
+                    method={method}
+                    onToggle={toggleMethod}
+                    onConfigure={openConfigDialog}
+                    onDelete={deleteCustomMethod}
+                    getCategoryBadge={getCategoryBadge}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="foodDelivery" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Food Delivery Partners</CardTitle>
+              <CardDescription>
+                Metode pembayaran dari platform food delivery
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {foodDeliveryMethods.map((method) => (
+                  <PaymentMethodCard
+                    key={method.id}
+                    method={method}
+                    onToggle={toggleMethod}
+                    onConfigure={openConfigDialog}
+                    onDelete={deleteCustomMethod}
+                    getCategoryBadge={getCategoryBadge}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Configuration Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Konfigurasi {selectedMethod?.name}</DialogTitle>
+            <DialogDescription>
+              Atur detail untuk metode pembayaran ini
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMethod?.id === 'qris-static' && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="merchant-name">Nama Merchant</Label>
+                <Input
+                  id="merchant-name"
+                  placeholder="Nama toko/merchant Anda"
+                  value={qrisMerchantName}
+                  onChange={(e) => setQrisMerchantName(e.target.value)}
+                  data-testid="qris-merchant-name-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Gambar QRIS</Label>
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  {qrisImage ? (
+                    <div className="space-y-4">
+                      <img 
+                        src={qrisImage} 
+                        alt="QRIS Preview" 
+                        className="max-w-xs mx-auto rounded-lg shadow-lg"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setQrisImage('');
+                          setQrisImageFile(null);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Hapus Gambar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
+                      <div className="text-sm text-gray-600">
+                        <label htmlFor="qris-upload" className="cursor-pointer">
+                          <span className="text-blue-600 hover:text-blue-500">
+                            Upload gambar QRIS
+                          </span>
+                          <span> atau drag and drop</span>
+                        </label>
+                        <input
+                          id="qris-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          data-testid="qris-image-upload"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        PNG, JPG, JPEG (Maks. 5MB)
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Gambar ini akan ditampilkan di kiosk saat pelanggan memilih QRIS
+                </p>
+              </div>
+            </div>
+          )}
+
+          {selectedMethod?.id === 'bank-transfer' && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="bank-name">Nama Bank</Label>
+                <Input
+                  id="bank-name"
+                  placeholder="Contoh: BCA, Mandiri, BRI"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  data-testid="bank-name-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="account-number">Nomor Rekening</Label>
+                <Input
+                  id="account-number"
+                  placeholder="1234567890"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  data-testid="account-number-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="account-name">Nama Pemilik Rekening</Label>
+                <Input
+                  id="account-name"
+                  placeholder="Nama sesuai rekening bank"
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  data-testid="account-name-input"
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Info:</strong> Informasi ini akan ditampilkan kepada pelanggan
+                  saat mereka memilih metode transfer bank
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={saveMethodConfig} className="gap-2" data-testid="save-config-button">
+              <Save className="h-4 w-4" />
+              Simpan Konfigurasi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Payment Method Card Component
+function PaymentMethodCard({ 
+  method, 
+  onToggle, 
+  onConfigure, 
+  onDelete,
+  getCategoryBadge 
+}: {
+  method: PaymentMethodConfig;
+  onToggle: (id: string) => void;
+  onConfigure: (method: PaymentMethodConfig) => void;
+  onDelete: (id: string) => void;
+  getCategoryBadge: (category: string) => React.ReactNode;
+}) {
+  const Icon = method.icon;
+  const needsConfiguration = (method.id === 'qris-static' || method.id === 'bank-transfer');
+  const isConfigured = method.config && (
+    (method.id === 'qris-static' && method.config.qrisImage) ||
+    (method.id === 'bank-transfer' && method.config.bankName)
+  );
+
+  return (
+    <div 
+      className="border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow"
+      data-testid={`payment-method-${method.id}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <div className={`${method.color} p-2.5 rounded-lg text-white`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold">{method.name}</h3>
+              {!method.isDefault && (
+                <Badge variant="outline" className="text-xs">Custom</Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              {getCategoryBadge(method.category)}
+              {method.fee !== undefined && method.fee > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  Fee: {method.fee}%
+                </Badge>
+              )}
+            </div>
+            {needsConfiguration && (
+              <div className="mt-2">
+                {isConfigured ? (
+                  <Badge variant="default" className="bg-green-500 text-xs">
+                    ✓ Terkonfigurasi
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="text-xs">
+                    ! Perlu Konfigurasi
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <Switch
+          checked={method.enabled}
+          onCheckedChange={() => onToggle(method.id)}
+          data-testid={`toggle-${method.id}`}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-2 border-t">
+        {needsConfiguration && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-2"
+            onClick={() => onConfigure(method)}
+            data-testid={`configure-${method.id}`}
+          >
+            <Settings className="h-4 w-4" />
+            Konfigurasi
+          </Button>
+        )}
+        {!method.isDefault && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={() => onDelete(method.id)}
+            data-testid={`delete-${method.id}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         )}
       </div>
     </div>
