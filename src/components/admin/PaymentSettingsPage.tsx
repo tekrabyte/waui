@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +23,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '@/services/api';
 
 interface PaymentMethodConfig {
   id: string;

@@ -626,6 +626,37 @@ export const api = {
       }
     }
   },
+
+  // 15. PAYMENT METHODS CONFIGURATION
+  paymentMethods: {
+    getAll: async () => {
+      const response = await fetch(`${BASE_URL}/payment-methods`, { headers: getAuthHeaders() });
+      return handleResponse(response);
+    },
+    update: async (id: string, data: any) => {
+      const response = await fetch(`${BASE_URL}/payment-methods/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      return handleResponse(response);
+    },
+    createCustom: async (data: any) => {
+      const response = await fetch(`${BASE_URL}/payment-methods/custom`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      return handleResponse(response);
+    },
+    deleteCustom: async (id: string) => {
+      const response = await fetch(`${BASE_URL}/payment-methods/custom/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      return handleResponse(response);
+    }
+  },
 };
 
 // Note:
