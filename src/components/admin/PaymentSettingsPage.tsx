@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ interface PaymentMethodConfig {
   color: string;
   isDefault: boolean;
   fee?: number;
+  feeType?: 'percentage' | 'flat'; // percentage (%) or flat (Rp)
   config?: {
     qrisImage?: string;
     merchantName?: string;
@@ -53,7 +55,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: Banknote,
     color: 'bg-green-500',
     isDefault: true,
-    fee: 0
+    fee: 0,
+    feeType: 'flat'
   },
   {
     id: 'qris-static',
@@ -65,6 +68,7 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     color: 'bg-blue-500',
     isDefault: true,
     fee: 0.7,
+    feeType: 'percentage',
     config: {}
   },
   {
@@ -77,6 +81,7 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     color: 'bg-purple-500',
     isDefault: true,
     fee: 0,
+    feeType: 'flat',
     config: {}
   },
   {
@@ -88,7 +93,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: CreditCard,
     color: 'bg-indigo-500',
     isDefault: true,
-    fee: 1.5
+    fee: 1.5,
+    feeType: 'percentage'
   },
   {
     id: 'credit',
@@ -99,7 +105,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: CreditCard,
     color: 'bg-pink-500',
     isDefault: true,
-    fee: 2.5
+    fee: 2.5,
+    feeType: 'percentage'
   },
   {
     id: 'ewallet',
@@ -110,7 +117,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: Smartphone,
     color: 'bg-teal-500',
     isDefault: true,
-    fee: 1.0
+    fee: 1.0,
+    feeType: 'percentage'
   },
   {
     id: 'gofood',
@@ -121,7 +129,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: UtensilsCrossed,
     color: 'bg-green-600',
     isDefault: true,
-    fee: 20
+    fee: 20,
+    feeType: 'percentage'
   },
   {
     id: 'grabfood',
@@ -132,7 +141,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: UtensilsCrossed,
     color: 'bg-emerald-600',
     isDefault: true,
-    fee: 20
+    fee: 20,
+    feeType: 'percentage'
   },
   {
     id: 'shopeefood',
@@ -143,7 +153,8 @@ const defaultPaymentMethods: PaymentMethodConfig[] = [
     icon: UtensilsCrossed,
     color: 'bg-orange-600',
     isDefault: true,
-    fee: 20
+    fee: 20,
+    feeType: 'percentage'
   }
 ];
 
@@ -164,10 +175,15 @@ export default function PaymentSettingsPage() {
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
 
+  // Form states for Fee Configuration
+  const [selectedFee, setSelectedFee] = useState<string>('0');
+  const [selectedFeeType, setSelectedFeeType] = useState<'percentage' | 'flat'>('percentage');
+
   // Form states for custom method
   const [customName, setCustomName] = useState('');
   const [customCategory, setCustomCategory] = useState<'offline' | 'online' | 'foodDelivery'>('offline');
   const [customFee, setCustomFee] = useState('0');
+  const [customFeeType, setCustomFeeType] = useState<'percentage' | 'flat'>('percentage');
 
   useEffect(() => {
     loadPaymentMethods();
@@ -223,6 +239,10 @@ export default function PaymentSettingsPage() {
       setAccountName(method.config.accountName || '');
     }
     
+    // Load fee config
+    setSelectedFee(method.fee?.toString() || '0');
+    setSelectedFeeType(method.feeType || 'percentage');
+    
     setIsDialogOpen(true);
   };
 
@@ -255,11 +275,24 @@ export default function PaymentSettingsPage() {
   const saveMethodConfig = () => {
     if (!selectedMethod) return;
 
+    // Validate fee
+    const feeValue = parseFloat(selectedFee);
+    if (isNaN(feeValue) || feeValue < 0) {
+      toast.error('Nilai fee harus angka positif');
+      return;
+    }
+
     const updated = paymentMethods.map(m => {
       if (m.id === selectedMethod.id) {
+        let updatedMethod = {
+          ...m,
+          fee: feeValue,
+          feeType: selectedFeeType
+        };
+
         if (m.id === 'qris-static') {
-          return {
-            ...m,
+          updatedMethod = {
+            ...updatedMethod,
             config: {
               ...m.config,
               qrisImage,
@@ -267,8 +300,8 @@ export default function PaymentSettingsPage() {
             }
           };
         } else if (m.id === 'bank-transfer') {
-          return {
-            ...m,
+          updatedMethod = {
+            ...updatedMethod,
             config: {
               ...m.config,
               bankName,
@@ -277,6 +310,8 @@ export default function PaymentSettingsPage() {
             }
           };
         }
+
+        return updatedMethod;
       }
       return m;
     });
@@ -292,6 +327,12 @@ export default function PaymentSettingsPage() {
       return;
     }
 
+    const feeValue = parseFloat(customFee);
+    if (isNaN(feeValue) || feeValue < 0) {
+      toast.error('Nilai fee harus angka positif');
+      return;
+    }
+
     const newMethod: PaymentMethodConfig = {
       id: `custom-${Date.now()}`,
       name: customName,
@@ -300,7 +341,8 @@ export default function PaymentSettingsPage() {
       icon: CreditCard,
       color: 'bg-gray-500',
       isDefault: false,
-      fee: parseFloat(customFee) || 0
+      fee: feeValue,
+      feeType: customFeeType
     };
 
     savePaymentMethods([...paymentMethods, newMethod]);
@@ -325,6 +367,9 @@ export default function PaymentSettingsPage() {
     setCustomName('');
     setCustomCategory('offline');
     setCustomFee('0');
+    setCustomFeeType('percentage');
+    setSelectedFee('0');
+    setSelectedFeeType('percentage');
   };
 
   const getCategoryBadge = (category: string) => {
@@ -338,6 +383,16 @@ export default function PaymentSettingsPage() {
       default:
         return null;
     }
+  };
+
+  const formatFeeDisplay = (fee: number | undefined, feeType: 'percentage' | 'flat' | undefined) => {
+    if (fee === undefined || fee === 0) return null;
+    
+    if (feeType === 'flat') {
+      return `Rp ${fee.toLocaleString('id-ID')}`;
+    }
+    
+    return `${fee}%`;
   };
 
   if (isLoading) {
@@ -404,17 +459,37 @@ export default function PaymentSettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="custom-fee">Biaya Transaksi (%)</Label>
+                <Label htmlFor="custom-fee-type">Tipe Biaya</Label>
+                <Select value={customFeeType} onValueChange={(v: any) => setCustomFeeType(v)}>
+                  <SelectTrigger id="custom-fee-type" data-testid="custom-fee-type-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Persentase (%)</SelectItem>
+                    <SelectItem value="flat">Nominal Tetap (Rp)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="custom-fee">
+                  {customFeeType === 'percentage' ? 'Biaya Transaksi (%)' : 'Biaya Transaksi (Rp)'}
+                </Label>
                 <Input
                   id="custom-fee"
                   type="number"
                   min="0"
-                  step="0.1"
-                  placeholder="0"
+                  step={customFeeType === 'percentage' ? '0.1' : '100'}
+                  placeholder={customFeeType === 'percentage' ? '0' : '0'}
                   value={customFee}
                   onChange={(e) => setCustomFee(e.target.value)}
                   data-testid="custom-fee-input"
                 />
+                <p className="text-xs text-muted-foreground">
+                  {customFeeType === 'percentage' 
+                    ? 'Contoh: 0.7 untuk 0.7% dari total transaksi'
+                    : 'Contoh: 5000 untuk Rp 5.000 per transaksi'
+                  }
+                </p>
               </div>
             </div>
             <DialogFooter>
@@ -506,6 +581,7 @@ export default function PaymentSettingsPage() {
                     onConfigure={openConfigDialog}
                     onDelete={deleteCustomMethod}
                     getCategoryBadge={getCategoryBadge}
+                    formatFeeDisplay={formatFeeDisplay}
                   />
                 ))}
               </div>
@@ -531,6 +607,7 @@ export default function PaymentSettingsPage() {
                     onConfigure={openConfigDialog}
                     onDelete={deleteCustomMethod}
                     getCategoryBadge={getCategoryBadge}
+                    formatFeeDisplay={formatFeeDisplay}
                   />
                 ))}
               </div>
@@ -556,6 +633,7 @@ export default function PaymentSettingsPage() {
                     onConfigure={openConfigDialog}
                     onDelete={deleteCustomMethod}
                     getCategoryBadge={getCategoryBadge}
+                    formatFeeDisplay={formatFeeDisplay}
                   />
                 ))}
               </div>
@@ -574,8 +652,49 @@ export default function PaymentSettingsPage() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Fee Configuration - Always shown for all methods */}
+          <div className="space-y-4 py-4 border-b">
+            <h3 className="font-semibold text-sm">Pengaturan Biaya Transaksi</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="fee-type">Tipe Biaya</Label>
+                <Select value={selectedFeeType} onValueChange={(v: any) => setSelectedFeeType(v)}>
+                  <SelectTrigger id="fee-type" data-testid="fee-type-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Persentase (%)</SelectItem>
+                    <SelectItem value="flat">Nominal Tetap (Rp)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fee-amount">
+                  {selectedFeeType === 'percentage' ? 'Biaya (%)' : 'Biaya (Rp)'}
+                </Label>
+                <Input
+                  id="fee-amount"
+                  type="number"
+                  min="0"
+                  step={selectedFeeType === 'percentage' ? '0.1' : '100'}
+                  placeholder="0"
+                  value={selectedFee}
+                  onChange={(e) => setSelectedFee(e.target.value)}
+                  data-testid="fee-amount-input"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg">
+              💡 {selectedFeeType === 'percentage' 
+                ? 'Biaya akan dihitung sebagai persentase dari total transaksi. Contoh: 0.7% dari Rp 100.000 = Rp 700'
+                : 'Biaya tetap akan dikenakan untuk setiap transaksi. Contoh: Rp 5.000 per transaksi'
+              }
+            </p>
+          </div>
+
           {selectedMethod?.id === 'qris-static' && (
             <div className="space-y-4 py-4">
+              <h3 className="font-semibold text-sm">Konfigurasi QRIS</h3>
               <div className="space-y-2">
                 <Label htmlFor="merchant-name">Nama Merchant</Label>
                 <Input
@@ -643,6 +762,7 @@ export default function PaymentSettingsPage() {
 
           {selectedMethod?.id === 'bank-transfer' && (
             <div className="space-y-4 py-4">
+              <h3 className="font-semibold text-sm">Konfigurasi Transfer Bank</h3>
               <div className="space-y-2">
                 <Label htmlFor="bank-name">Nama Bank</Label>
                 <Input
@@ -706,13 +826,15 @@ function PaymentMethodCard({
   onToggle, 
   onConfigure, 
   onDelete,
-  getCategoryBadge 
+  getCategoryBadge,
+  formatFeeDisplay
 }: {
   method: PaymentMethodConfig;
   onToggle: (id: string) => void;
   onConfigure: (method: PaymentMethodConfig) => void;
   onDelete: (id: string) => void;
   getCategoryBadge: (category: string) => React.ReactNode;
+  formatFeeDisplay: (fee: number | undefined, feeType: 'percentage' | 'flat' | undefined) => string | null;
 }) {
   const Icon = method.icon;
   const needsConfiguration = (method.id === 'qris-static' || method.id === 'bank-transfer');
@@ -740,9 +862,9 @@ function PaymentMethodCard({
             </div>
             <div className="flex items-center gap-2 mb-2">
               {getCategoryBadge(method.category)}
-              {method.fee !== undefined && method.fee > 0 && (
+              {formatFeeDisplay(method.fee, method.feeType) && (
                 <Badge variant="secondary" className="text-xs">
-                  Fee: {method.fee}%
+                  Fee: {formatFeeDisplay(method.fee, method.feeType)}
                 </Badge>
               )}
             </div>
