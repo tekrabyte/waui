@@ -1,7 +1,7 @@
 import { 
   Product, Staff, Outlet, InventoryItem, Category, 
   Expense, CashflowSummary, Brand, Package, Bundle, 
-  Transaction, StockLog 
+  Transaction, StockLog, Customer
 } from '../types/types';
 
 // Sesuaikan URL ini dengan alamat WordPress Anda

@@ -1744,37 +1744,107 @@ class posq_Backend {
         }
 
         global $wpdb;
-        $product = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}posq_products WHERE id = %d",
-            $data['productId']
-        ));
+        
+        // Start transaction untuk memastikan konsistensi data
+        $wpdb->query('START TRANSACTION');
+        
+        try {
+            // Get source product
+            $product = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}posq_products WHERE id = %d AND is_deleted = 0",
+                $data['productId']
+            ));
 
-        if (!$product) {
-            return new WP_Error('not_found', 'Product not found', ['status' => 404]);
+            if (!$product) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('not_found', 'Product not found', ['status' => 404]);
+            }
+
+            if ($product->stock < $data['quantity']) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('insufficient_stock', 'Insufficient stock', ['status' => 400]);
+            }
+
+            // Cek apakah produk sudah ada di outlet tujuan
+            $target_product = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}posq_products 
+                 WHERE name = %s AND outlet_id = %d AND is_deleted = 0",
+                $product->name,
+                $data['toOutletId']
+            ));
+
+            if ($target_product) {
+                // Produk sudah ada di outlet tujuan, tambahkan stoknya
+                $wpdb->update(
+                    $wpdb->prefix . 'posq_products',
+                    ['stock' => $target_product->stock + $data['quantity']],
+                    ['id' => $target_product->id]
+                );
+                
+                // Log penambahan di outlet tujuan
+                self::log_stock_change(
+                    $target_product->id, 
+                    $data['toOutletId'], 
+                    'transfer_in', 
+                    $data['quantity'],
+                    $product->outlet_id,
+                    $data['toOutletId']
+                );
+            } else {
+                // Produk belum ada di outlet tujuan, buat produk baru
+                $wpdb->insert($wpdb->prefix . 'posq_products', [
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'stock' => $data['quantity'],
+                    'outlet_id' => $data['toOutletId'],
+                    'category_id' => $product->category_id,
+                    'brand_id' => $product->brand_id,
+                    'description' => $product->description,
+                    'image_url' => $product->image_url,
+                    'is_deleted' => 0
+                ]);
+                
+                $new_product_id = $wpdb->insert_id;
+                
+                // Log penambahan di outlet tujuan untuk produk baru
+                self::log_stock_change(
+                    $new_product_id, 
+                    $data['toOutletId'], 
+                    'transfer_in', 
+                    $data['quantity'],
+                    $product->outlet_id,
+                    $data['toOutletId']
+                );
+            }
+
+            // Kurangi stok dari produk sumber
+            $wpdb->update(
+                $wpdb->prefix . 'posq_products',
+                ['stock' => $product->stock - $data['quantity']],
+                ['id' => $product->id]
+            );
+
+            // Log pengurangan di outlet sumber
+            self::log_stock_change(
+                $product->id, 
+                $product->outlet_id, 
+                'transfer_out', 
+                $data['quantity'],
+                $product->outlet_id,
+                $data['toOutletId']
+            );
+
+            $wpdb->query('COMMIT');
+            
+            return [
+                'success' => true,
+                'message' => 'Stock transferred successfully'
+            ];
+            
+        } catch (Exception $e) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('transfer_failed', $e->getMessage(), ['status' => 500]);
         }
-
-        if ($product->stock < $data['quantity']) {
-            return new WP_Error('insufficient_stock', 'Insufficient stock', ['status' => 400]);
-        }
-
-        // Update stock
-        $wpdb->update(
-            $wpdb->prefix . 'posq_products',
-            ['stock' => $product->stock - $data['quantity']],
-            ['id' => $product->id]
-        );
-
-        // Log
-        self::log_stock_change(
-            $product->id, 
-            $product->outlet_id, 
-            'transfer', 
-            $data['quantity'],
-            $product->outlet_id,
-            $data['toOutletId']
-        );
-
-        return ['success' => true];
     }
 
     public static function get_stock_logs() {

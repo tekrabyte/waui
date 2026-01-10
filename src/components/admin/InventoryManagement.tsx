@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { InventoryItem, Outlet, Product } from '../../types/types';
+import { InventoryItem, Outlet, Product, StockLog } from '../../types/types';
 import { api } from '../../services/api';
-import { AlertTriangle, RefreshCw, X, Plus, Minus, ArrowRightLeft, Package2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, X, Plus, Minus, ArrowRightLeft, Package2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type StockActionType = 'add' | 'reduce' | 'transfer';
+
+type ViewMode = 'inventory' | 'history';
 
 export function InventoryManagement() {
   const [inventory, setInventory] = useState<Product[]>([]);
@@ -28,10 +30,14 @@ export function InventoryManagement() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedOutletFilter, setSelectedOutletFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('inventory');
+  const [stockLogs, setStockLogs] = useState<any[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   useEffect(() => {
     loadInventory();
     loadOutlets();
+    loadStockLogs();
   }, []);
 
   const loadInventory = async () => {
@@ -53,6 +59,18 @@ export function InventoryManagement() {
       setOutlets(data);
     } catch (err) {
       console.error('Failed to load outlets', err);
+    }
+  };
+
+  const loadStockLogs = async () => {
+    try {
+      setIsLoadingLogs(true);
+      const data = await api.stock.getLogs();
+      setStockLogs(data);
+    } catch (err) {
+      console.error('Failed to load stock logs', err);
+    } finally {
+      setIsLoadingLogs(false);
     }
   };
 
@@ -118,6 +136,7 @@ export function InventoryManagement() {
 
       // Reload inventory setelah update
       await loadInventory();
+      await loadStockLogs();
       
       // Tutup modal setelah 1.5 detik
       setTimeout(() => {
@@ -137,6 +156,28 @@ export function InventoryManagement() {
     if (stock <= 10) return { label: 'Stok Rendah', color: 'bg-orange-100 text-orange-800', icon: <AlertTriangle size={12} /> };
     if (stock <= 50) return { label: 'Stok Sedang', color: 'bg-yellow-100 text-yellow-800', icon: null };
     return { label: 'Stok Cukup', color: 'bg-green-100 text-green-800', icon: null };
+  };
+
+  const getOperationLabel = (operation: string) => {
+    switch (operation) {
+      case 'add': return 'Tambah Stok';
+      case 'reduce': return 'Kurangi Stok';
+      case 'transfer_out': return 'Transfer Keluar';
+      case 'transfer_in': return 'Transfer Masuk';
+      case 'sale': return 'Penjualan';
+      default: return operation;
+    }
+  };
+
+  const getOperationColor = (operation: string) => {
+    switch (operation) {
+      case 'add': return 'bg-green-100 text-green-800';
+      case 'transfer_in': return 'bg-blue-100 text-blue-800';
+      case 'reduce': return 'bg-orange-100 text-orange-800';
+      case 'transfer_out': return 'bg-purple-100 text-purple-800';
+      case 'sale': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (isLoading) {
@@ -161,6 +202,28 @@ export function InventoryManagement() {
           <h1 className="text-3xl font-bold tracking-tight">Manajemen Inventori</h1>
           <p className="text-muted-foreground">Lacak tingkat stok dan kelola persediaan per outlet</p>
         </div>
+
+      {/* View Mode Toggle */}
+      <div className="flex gap-2">
+        <Button
+          onClick={() => setViewMode('inventory')}
+          variant={viewMode === 'inventory' ? 'default' : 'outline'}
+          data-testid="view-inventory-btn"
+        >
+          <Package2 className="h-4 w-4 mr-2" />
+          Daftar Stok
+        </Button>
+        <Button
+          onClick={() => setViewMode('history')}
+          variant={viewMode === 'history' ? 'default' : 'outline'}
+          data-testid="view-history-btn"
+        >
+          <History className="h-4 w-4 mr-2" />
+          Riwayat Stok
+        </Button>
+      </div>
+
+      {viewMode === 'inventory' ? (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -297,6 +360,101 @@ export function InventoryManagement() {
           </div>
         </CardContent>
       </Card>
+      ) : (
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-6 w-6" />
+                Riwayat Perubahan Stok
+              </CardTitle>
+              <CardDescription>Log semua perubahan stok di sistem</CardDescription>
+            </div>
+            <Button 
+              onClick={loadStockLogs}
+              variant="outline"
+              size="sm"
+              data-testid="refresh-logs-btn"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {isLoadingLogs ? (
+            <div className="text-center py-8">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">Memuat riwayat...</p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead>Produk</TableHead>
+                    <TableHead>Outlet</TableHead>
+                    <TableHead>Operasi</TableHead>
+                    <TableHead className="text-center">Jumlah</TableHead>
+                    <TableHead>Detail Transfer</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stockLogs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        Belum ada riwayat perubahan stok
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    stockLogs.map((log) => (
+                      <TableRow key={log.id} data-testid={`log-row-${log.id}`}>
+                        <TableCell className="text-sm">
+                          {new Date(log.timestamp).toLocaleString('id-ID', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </TableCell>
+                        <TableCell className="font-medium">{log.product_name || 'N/A'}</TableCell>
+                        <TableCell>{log.outlet_name || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className={getOperationColor(log.operation)}>
+                            {getOperationLabel(log.operation)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-semibold">
+                          {log.operation === 'reduce' || log.operation === 'transfer_out' || log.operation === 'sale' ? '-' : '+'}
+                          {log.quantity}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {(log.operation === 'transfer_out' || log.operation === 'transfer_in') && (
+                            <div>
+                              {log.from_outlet_id && (
+                                <div>Dari: {outlets.find(o => o.id === String(log.from_outlet_id))?.name || `Outlet #${log.from_outlet_id}`}</div>
+                              )}
+                              {log.to_outlet_id && (
+                                <div>Ke: {outlets.find(o => o.id === String(log.to_outlet_id))?.name || `Outlet #${log.to_outlet_id}`}</div>
+                              )}
+                            </div>
+                          )}
+                          {!log.from_outlet_id && !log.to_outlet_id && '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      )}
 
       {/* Modal untuk Stock Management */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
