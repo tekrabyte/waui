@@ -84,6 +84,9 @@ export interface ProductPackage {
   manualStock?: number;
 }
 
+// Alias untuk kompatibilitas dengan API
+export type Package = ProductPackage;
+
 export interface BundleItem {
   productId: string;
   packageId?: string;
@@ -333,4 +336,15 @@ export interface BestSellerItem {
   productId: string;
   quantity: number;
   revenue: number;
+}
+
+export interface StockLog {
+  id: string;
+  productId: string;
+  action: 'add' | 'reduce' | 'transfer';
+  quantity: number;
+  timestamp: string;
+  userId?: string;
+  outletId?: string;
+  notes?: string;
 }

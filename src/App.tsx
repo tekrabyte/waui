@@ -15,7 +15,7 @@ import DashboardPage from './components/admin/DashboardPage';
 import OutletsManagementPage from './components/admin/OutletsManagementPage'; 
 import StaffManagementPage from './components/admin/StaffManagementPage';
 import ProductManagementPage from './components/admin/ProductManagementPage';
-import StockManagementPage from './components/admin/StockManagementPage';
+import {InventoryManagement} from './components/admin/InventoryManagement';
 import PaymentSettingsPage from './components/admin/PaymentSettingsPage';
 import CategoryBrandPage from './components/admin/CategoryBrandPage';
 import ReportsPage from './components/admin/ReportsPage';
@@ -223,7 +223,7 @@ export function App() {
           {adminPage === 'staff' && <StaffManagementPage />}
           {adminPage === 'customers' && <CustomerManagementPage />}
           {adminPage === 'products' && <ProductManagementPage />}
-          {adminPage === 'inventory' && <StockManagementPage />}
+          {adminPage === 'inventory' && <InventoryManagement />}
           {adminPage === 'categorybrand' && <CategoryBrandPage />}
           {adminPage === 'reports' && <ReportsPage />}
           {adminPage === 'cashflow' && <CashflowPage />}
