@@ -48,9 +48,10 @@ export default function PromoManagementPage() {
   const userOutletId = userProfile?.outletId;
   const targetOutletId = isOwner ? null : userOutletId || null;
 
-  const { data: products, isLoading: productsLoading } = useListProductsByOutlet(targetOutletId);
-  const { data: packages, isLoading: packagesLoading } = useListActivePackages(targetOutletId);
-  const { data: bundles, isLoading: bundlesLoading } = useListActiveBundles(targetOutletId);
+  // Fetch all products without outlet filter to get complete data
+  const { data: products, isLoading: productsLoading } = useListProductsByOutlet(undefined);
+  const { data: packages, isLoading: packagesLoading } = useListActivePackages(null);
+  const { data: bundles, isLoading: bundlesLoading } = useListActiveBundles(null);
 
   const updateProduct = useUpdateProduct();
   const updatePackage = useUpdatePackage();
@@ -85,8 +86,14 @@ export default function PromoManagementPage() {
   const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
   const [selectedBundles, setSelectedBundles] = useState<string[]>([]);
   
-  // Active tab outlet for filtering products
+  // Active tab outlet for filtering products (including factory stock tab)
   const [activeOutletTab, setActiveOutletTab] = useState<string>('');
+
+  // Detect factory outlet (outlet with "Pabrik" in name or specific factory outlet)
+  const factoryOutlet = useMemo(() => {
+    if (!outlets) return null;
+    return outlets.find(o => o.name.toLowerCase().includes('pabrik') || o.name.toLowerCase().includes('factory'));
+  }, [outlets]);
 
   // Set default outlet tab when outlets load
   useEffect(() => {
@@ -167,6 +174,8 @@ export default function PromoManagementPage() {
   };
 
   const handleEditPromo = (promo: StandalonePromo) => {
+    console.log('Editing promo:', promo.id, promo.name);
+    
     setSelectedPromo(promo);
     setPromoForm({
       name: promo.name,
@@ -185,6 +194,12 @@ export default function PromoManagementPage() {
     const appliedProducts = products?.filter(p => p.appliedPromoId === promo.id).map(p => p.id) || [];
     const appliedPackages = packages?.filter(p => p.appliedPromoId === promo.id).map(p => p.id) || [];
     const appliedBundles = bundles?.filter(b => b.appliedPromoId === promo.id).map(b => b.id) || [];
+
+    console.log('Applied items found:', {
+      products: appliedProducts.length,
+      packages: appliedPackages.length,
+      bundles: appliedBundles.length
+    });
 
     setSelectedProducts(appliedProducts);
     setSelectedPackages(appliedPackages);
@@ -715,7 +730,7 @@ export default function PromoManagementPage() {
                   </p>
                   
                   <Tabs value={activeOutletTab} onValueChange={setActiveOutletTab} className="w-full">
-                    <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${outlets.length}, 1fr)` }}>
+                    <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${outlets.length + (factoryOutlet ? 1 : 0)}, 1fr)` }}>
                       {outlets.map((outlet) => (
                         <TabsTrigger 
                           key={outlet.id} 
@@ -726,6 +741,16 @@ export default function PromoManagementPage() {
                           {outlet.name}
                         </TabsTrigger>
                       ))}
+                      {factoryOutlet && (
+                        <TabsTrigger 
+                          key="factory-stock" 
+                          value="factory-stock"
+                          className="flex items-center gap-2"
+                        >
+                          <Package className="h-4 w-4" />
+                          Stok Pabrik
+                        </TabsTrigger>
+                      )}
                     </TabsList>
                     
                     {outlets.map((outlet) => (
@@ -736,7 +761,7 @@ export default function PromoManagementPage() {
                             <div>
                               <h4 className="font-semibold mb-2 flex items-center gap-2">
                                 <Package className="h-4 w-4" />
-                                Produk Satuan ({selectedProducts.length}/{productsWithType.length})
+                                Produk Satuan ({selectedProducts.filter(id => productsWithType.some(p => p.id === id)).length}/{productsWithType.length})
                               </h4>
                               <div className="space-y-2 ml-6">
                                 {productsWithType.map((product) => (
@@ -763,7 +788,7 @@ export default function PromoManagementPage() {
                             <div>
                               <h4 className="font-semibold mb-2 flex items-center gap-2">
                                 <PackagePlus className="h-4 w-4" />
-                                Paket ({selectedPackages.length}/{packagesWithType.length})
+                                Paket ({selectedPackages.filter(id => packagesWithType.some(p => p.id === id)).length}/{packagesWithType.length})
                               </h4>
                               <div className="space-y-2 ml-6">
                                 {packagesWithType.map((pkg) => (
@@ -790,7 +815,7 @@ export default function PromoManagementPage() {
                             <div>
                               <h4 className="font-semibold mb-2 flex items-center gap-2">
                                 <Layers className="h-4 w-4" />
-                                Bundle ({selectedBundles.length}/{bundlesWithType.length})
+                                Bundle ({selectedBundles.filter(id => bundlesWithType.some(b => b.id === id)).length}/{bundlesWithType.length})
                               </h4>
                               <div className="space-y-2 ml-6">
                                 {bundlesWithType.map((bundle) => (
@@ -831,6 +856,121 @@ export default function PromoManagementPage() {
                         </p>
                       </TabsContent>
                     ))}
+                    
+                    {/* Factory Stock Tab */}
+                    {factoryOutlet && (
+                      <TabsContent key="factory-stock" value="factory-stock" className="mt-4">
+                        <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
+                          {(() => {
+                            const factoryProducts = products?.filter(p => p.outletId === factoryOutlet.id).map(p => ({ ...p, itemType: 'product' as const })) || [];
+                            const factoryPackages = packages?.filter(p => p.outletId === factoryOutlet.id).map(p => ({ ...p, itemType: 'package' as const })) || [];
+                            const factoryBundles = bundles?.filter(b => b.outletId === factoryOutlet.id).map(b => ({ ...b, itemType: 'bundle' as const })) || [];
+                            
+                            return (
+                              <>
+                                {/* Factory Products */}
+                                {factoryProducts.length > 0 && (
+                                  <div>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                      <Package className="h-4 w-4" />
+                                      Produk Satuan Pabrik ({selectedProducts.filter(id => factoryProducts.some(p => p.id === id)).length}/{factoryProducts.length})
+                                    </h4>
+                                    <div className="space-y-2 ml-6">
+                                      {factoryProducts.map((product) => (
+                                        <div key={product.id} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`factory-product-${product.id}`}
+                                            checked={selectedProducts.includes(product.id)}
+                                            onCheckedChange={() => toggleProductSelection(product.id)}
+                                          />
+                                          <label
+                                            htmlFor={`factory-product-${product.id}`}
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                          >
+                                            {product.name} - {formatCurrency(product.price)}
+                                          </label>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Factory Packages */}
+                                {factoryPackages.length > 0 && (
+                                  <div>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                      <PackagePlus className="h-4 w-4" />
+                                      Paket Pabrik ({selectedPackages.filter(id => factoryPackages.some(p => p.id === id)).length}/{factoryPackages.length})
+                                    </h4>
+                                    <div className="space-y-2 ml-6">
+                                      {factoryPackages.map((pkg) => (
+                                        <div key={pkg.id} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`factory-package-${pkg.id}`}
+                                            checked={selectedPackages.includes(pkg.id)}
+                                            onCheckedChange={() => togglePackageSelection(pkg.id)}
+                                          />
+                                          <label
+                                            htmlFor={`factory-package-${pkg.id}`}
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                          >
+                                            {pkg.name} - {formatCurrency(pkg.price)}
+                                          </label>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Factory Bundles */}
+                                {factoryBundles.length > 0 && (
+                                  <div>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                      <Layers className="h-4 w-4" />
+                                      Bundle Pabrik ({selectedBundles.filter(id => factoryBundles.some(b => b.id === id)).length}/{factoryBundles.length})
+                                    </h4>
+                                    <div className="space-y-2 ml-6">
+                                      {factoryBundles.map((bundle) => (
+                                        <div key={bundle.id} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`factory-bundle-${bundle.id}`}
+                                            checked={selectedBundles.includes(bundle.id)}
+                                            onCheckedChange={() => toggleBundleSelection(bundle.id)}
+                                          />
+                                          <label
+                                            htmlFor={`factory-bundle-${bundle.id}`}
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                          >
+                                            {bundle.name} - {formatCurrency(bundle.price)}
+                                          </label>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {factoryProducts.length === 0 && factoryPackages.length === 0 && factoryBundles.length === 0 && (
+                                  <div className="text-center py-8 text-muted-foreground">
+                                    <Package className="mx-auto h-12 w-12 mb-3 opacity-50" />
+                                    <p className="text-sm">
+                                      Tidak ada produk di stok pabrik
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Total dipilih dari Stok Pabrik: {
+                            (products?.filter(p => p.outletId === factoryOutlet.id && selectedProducts.includes(p.id)).length || 0) +
+                            (packages?.filter(p => p.outletId === factoryOutlet.id && selectedPackages.includes(p.id)).length || 0) +
+                            (bundles?.filter(b => b.outletId === factoryOutlet.id && selectedBundles.includes(b.id)).length || 0)
+                          } item
+                        </p>
+                      </TabsContent>
+                    )}
                   </Tabs>
 
                   <p className="text-sm font-medium text-muted-foreground mt-4 p-3 bg-muted rounded-md">
