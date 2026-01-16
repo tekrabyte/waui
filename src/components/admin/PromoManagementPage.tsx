@@ -22,11 +22,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tag, Pencil, Trash2, Plus, TrendingUp, Package, PackagePlus, Layers, Search, X } from 'lucide-react';
+import { Tag, Pencil, Trash2, Plus, TrendingUp, Package, PackagePlus, Layers, Search, X, Store } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PromoConfigForm from '../PromoConfigForm';
 import type { Product, ProductPackage, Bundle, StandalonePromo } from '../../types/types';
 import { toast } from 'sonner';
@@ -84,58 +85,52 @@ export default function PromoManagementPage() {
   const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
   const [selectedBundles, setSelectedBundles] = useState<string[]>([]);
   
-  // Selected outlets for filtering products
-  const [selectedOutlets, setSelectedOutlets] = useState<string[]>([]);
+  // Active tab outlet for filtering products
+  const [activeOutletTab, setActiveOutletTab] = useState<string>('');
+
+  // Set default outlet tab when outlets load
+  useEffect(() => {
+    if (isOwner && outlets && outlets.length > 0 && !activeOutletTab) {
+      setActiveOutletTab(outlets[0].id);
+    }
+  }, [outlets, isOwner, activeOutletTab]);
 
   // Convert data to PromoItem with itemType
   const productsWithType = useMemo((): PromoItem[] => {
     if (!products) return [];
-    // Filter by selected outlets if any are selected
-    if (selectedOutlets.length > 0) {
+    // Filter by active outlet tab
+    if (isOwner && activeOutletTab) {
       return products
-        .filter(p => selectedOutlets.includes(p.outletId || ''))
+        .filter(p => p.outletId === activeOutletTab)
         .map(p => ({ ...p, itemType: 'product' as const }));
     }
     return products.map(p => ({ ...p, itemType: 'product' as const }));
-  }, [products, selectedOutlets]);
+  }, [products, activeOutletTab, isOwner]);
 
   const packagesWithType = useMemo((): PromoItem[] => {
     if (!packages) return [];
-    // Filter by selected outlets if any are selected
-    if (selectedOutlets.length > 0) {
+    // Filter by active outlet tab
+    if (isOwner && activeOutletTab) {
       return packages
-        .filter(p => selectedOutlets.includes(p.outletId || ''))
+        .filter(p => p.outletId === activeOutletTab)
         .map(p => ({ ...p, itemType: 'package' as const }));
     }
     return packages.map(p => ({ ...p, itemType: 'package' as const }));
-  }, [packages, selectedOutlets]);
+  }, [packages, activeOutletTab, isOwner]);
 
   const bundlesWithType = useMemo((): PromoItem[] => {
     if (!bundles) return [];
-    // Filter by selected outlets if any are selected
-    if (selectedOutlets.length > 0) {
+    // Filter by active outlet tab
+    if (isOwner && activeOutletTab) {
       return bundles
-        .filter(b => selectedOutlets.includes(b.outletId || ''))
+        .filter(b => b.outletId === activeOutletTab)
         .map(b => ({ ...b, itemType: 'bundle' as const }));
     }
     return bundles.map(b => ({ ...b, itemType: 'bundle' as const }));
-  }, [bundles, selectedOutlets]);
+  }, [bundles, activeOutletTab, isOwner]);
 
   const allItems = useMemo(() => {
     return [...productsWithType, ...packagesWithType, ...bundlesWithType];
-  }, [productsWithType, packagesWithType, bundlesWithType]);
-
-  // Auto-filter selected items when outlet selection changes
-  // This prevents "ghost selections" from deselected outlets
-  useEffect(() => {
-    const visibleProductIds = new Set(productsWithType.map(p => p.id));
-    const visiblePackageIds = new Set(packagesWithType.map(p => p.id));
-    const visibleBundleIds = new Set(bundlesWithType.map(b => b.id));
-
-    // Filter out selected items that are no longer visible
-    setSelectedProducts(prev => prev.filter(id => visibleProductIds.has(id)));
-    setSelectedPackages(prev => prev.filter(id => visiblePackageIds.has(id)));
-    setSelectedBundles(prev => prev.filter(id => visibleBundleIds.has(id)));
   }, [productsWithType, packagesWithType, bundlesWithType]);
 
   // Filter promos by search
@@ -164,7 +159,10 @@ export default function PromoManagementPage() {
     setSelectedProducts([]);
     setSelectedPackages([]);
     setSelectedBundles([]);
-    setSelectedOutlets([]);
+    // Reset to first outlet tab
+    if (isOwner && outlets && outlets.length > 0) {
+      setActiveOutletTab(outlets[0].id);
+    }
     setIsCreateEditDialogOpen(true);
   };
 
@@ -192,18 +190,18 @@ export default function PromoManagementPage() {
     setSelectedPackages(appliedPackages);
     setSelectedBundles(appliedBundles);
     
-    // Get unique outlets from applied products
-    const outletIds = new Set<string>();
-    products?.filter(p => p.appliedPromoId === promo.id).forEach(p => {
-      if (p.outletId) outletIds.add(p.outletId);
-    });
-    packages?.filter(p => p.appliedPromoId === promo.id).forEach(p => {
-      if (p.outletId) outletIds.add(p.outletId);
-    });
-    bundles?.filter(b => b.appliedPromoId === promo.id).forEach(b => {
-      if (b.outletId) outletIds.add(b.outletId);
-    });
-    setSelectedOutlets(Array.from(outletIds));
+    // Get first outlet from applied products, or use first available outlet
+    let firstOutletId = '';
+    const firstProduct = products?.find(p => p.appliedPromoId === promo.id);
+    const firstPackage = packages?.find(p => p.appliedPromoId === promo.id);
+    const firstBundle = bundles?.find(b => b.appliedPromoId === promo.id);
+    
+    if (firstProduct?.outletId) firstOutletId = firstProduct.outletId;
+    else if (firstPackage?.outletId) firstOutletId = firstPackage.outletId;
+    else if (firstBundle?.outletId) firstOutletId = firstBundle.outletId;
+    else if (outlets && outlets.length > 0) firstOutletId = outlets[0].id;
+    
+    setActiveOutletTab(firstOutletId);
     
     setIsCreateEditDialogOpen(true);
   };
@@ -465,12 +463,8 @@ export default function PromoManagementPage() {
     );
   };
 
-  const toggleOutletSelection = (outletId: string) => {
-    setSelectedOutlets(prev =>
-      prev.includes(outletId)
-        ? prev.filter(id => id !== outletId)
-        : [...prev, outletId]
-    );
+  const toggleOutletTab = (outletId: string) => {
+    setActiveOutletTab(outletId);
   };
 
   const isLoading = promosLoading || productsLoading || packagesLoading || bundlesLoading;
@@ -712,148 +706,233 @@ export default function PromoManagementPage() {
                 }}
               />
 
-              {/* Outlet Selection */}
-              {isOwner && outlets && outlets.length > 0 && (
+              {/* Outlet Tabs and Product Selection */}
+              {isOwner && outlets && outlets.length > 0 ? (
                 <div className="space-y-2">
-                  <Label>Pilih Outlet *</Label>
+                  <Label>Pilih Outlet dan Produk *</Label>
                   <p className="text-sm text-muted-foreground">
-                    Pilih outlet untuk menampilkan produk yang tersedia di outlet tersebut
+                    Pilih outlet melalui tab, lalu pilih produk yang akan mendapatkan promo
                   </p>
                   
-                  <div className="border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
-                    {outlets.map((outlet) => (
-                      <div key={outlet.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`outlet-${outlet.id}`}
-                          checked={selectedOutlets.includes(outlet.id)}
-                          onCheckedChange={() => toggleOutletSelection(outlet.id)}
-                        />
-                        <label
-                          htmlFor={`outlet-${outlet.id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                  <Tabs value={activeOutletTab} onValueChange={setActiveOutletTab} className="w-full">
+                    <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${outlets.length}, 1fr)` }}>
+                      {outlets.map((outlet) => (
+                        <TabsTrigger 
+                          key={outlet.id} 
+                          value={outlet.id}
+                          className="flex items-center gap-2"
                         >
+                          <Store className="h-4 w-4" />
                           {outlet.name}
-                          {outlet.address && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({outlet.address})
-                            </span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    
+                    {outlets.map((outlet) => (
+                      <TabsContent key={outlet.id} value={outlet.id} className="mt-4">
+                        <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
+                          {/* Products */}
+                          {productsWithType.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                Produk Satuan ({selectedProducts.length}/{productsWithType.length})
+                              </h4>
+                              <div className="space-y-2 ml-6">
+                                {productsWithType.map((product) => (
+                                  <div key={product.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`product-${product.id}`}
+                                      checked={selectedProducts.includes(product.id)}
+                                      onCheckedChange={() => toggleProductSelection(product.id)}
+                                    />
+                                    <label
+                                      htmlFor={`product-${product.id}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                    >
+                                      {product.name} - {formatCurrency(product.price)}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                        </label>
-                      </div>
+
+                          {/* Packages */}
+                          {packagesWithType.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                <PackagePlus className="h-4 w-4" />
+                                Paket ({selectedPackages.length}/{packagesWithType.length})
+                              </h4>
+                              <div className="space-y-2 ml-6">
+                                {packagesWithType.map((pkg) => (
+                                  <div key={pkg.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`package-${pkg.id}`}
+                                      checked={selectedPackages.includes(pkg.id)}
+                                      onCheckedChange={() => togglePackageSelection(pkg.id)}
+                                    />
+                                    <label
+                                      htmlFor={`package-${pkg.id}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                    >
+                                      {pkg.name} - {formatCurrency(pkg.price)}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bundles */}
+                          {bundlesWithType.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                <Layers className="h-4 w-4" />
+                                Bundle ({selectedBundles.length}/{bundlesWithType.length})
+                              </h4>
+                              <div className="space-y-2 ml-6">
+                                {bundlesWithType.map((bundle) => (
+                                  <div key={bundle.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`bundle-${bundle.id}`}
+                                      checked={selectedBundles.includes(bundle.id)}
+                                      onCheckedChange={() => toggleBundleSelection(bundle.id)}
+                                    />
+                                    <label
+                                      htmlFor={`bundle-${bundle.id}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                    >
+                                      {bundle.name} - {formatCurrency(bundle.price)}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {productsWithType.length === 0 && packagesWithType.length === 0 && bundlesWithType.length === 0 && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Package className="mx-auto h-12 w-12 mb-3 opacity-50" />
+                              <p className="text-sm">
+                                Tidak ada produk di outlet ini
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Total dipilih dari {outlet.name}: {
+                            productsWithType.filter(p => selectedProducts.includes(p.id)).length +
+                            packagesWithType.filter(p => selectedPackages.includes(p.id)).length +
+                            bundlesWithType.filter(b => selectedBundles.includes(b.id)).length
+                          } item
+                        </p>
+                      </TabsContent>
                     ))}
+                  </Tabs>
+
+                  <p className="text-sm font-medium text-muted-foreground mt-4 p-3 bg-muted rounded-md">
+                    Total dipilih (semua outlet): {selectedProducts.length + selectedPackages.length + selectedBundles.length} item
+                  </p>
+                </div>
+              ) : (
+                // Non-owner view (cashier/staff with single outlet)
+                <div className="space-y-2">
+                  <Label>Pilih Produk yang Diterapkan</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Pilih produk, paket, atau bundle yang akan mendapatkan promo ini
+                  </p>
+                  
+                  <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
+                    {/* Products */}
+                    {productsWithType.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          Produk Satuan ({selectedProducts.length}/{productsWithType.length})
+                        </h4>
+                        <div className="space-y-2 ml-6">
+                          {productsWithType.map((product) => (
+                            <div key={product.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`product-${product.id}`}
+                                checked={selectedProducts.includes(product.id)}
+                                onCheckedChange={() => toggleProductSelection(product.id)}
+                              />
+                              <label
+                                htmlFor={`product-${product.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                              >
+                                {product.name} - {formatCurrency(product.price)}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Packages */}
+                    {packagesWithType.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <PackagePlus className="h-4 w-4" />
+                          Paket ({selectedPackages.length}/{packagesWithType.length})
+                        </h4>
+                        <div className="space-y-2 ml-6">
+                          {packagesWithType.map((pkg) => (
+                            <div key={pkg.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`package-${pkg.id}`}
+                                checked={selectedPackages.includes(pkg.id)}
+                                onCheckedChange={() => togglePackageSelection(pkg.id)}
+                              />
+                              <label
+                                htmlFor={`package-${pkg.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                              >
+                                {pkg.name} - {formatCurrency(pkg.price)}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bundles */}
+                    {bundlesWithType.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <Layers className="h-4 w-4" />
+                          Bundle ({selectedBundles.length}/{bundlesWithType.length})
+                        </h4>
+                        <div className="space-y-2 ml-6">
+                          {bundlesWithType.map((bundle) => (
+                            <div key={bundle.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`bundle-${bundle.id}`}
+                                checked={selectedBundles.includes(bundle.id)}
+                                onCheckedChange={() => toggleBundleSelection(bundle.id)}
+                              />
+                              <label
+                                htmlFor={`bundle-${bundle.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                              >
+                                {bundle.name} - {formatCurrency(bundle.price)}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <p className="text-sm text-muted-foreground mt-2">
-                    Total dipilih: {selectedOutlets.length} outlet
+                    Total dipilih: {selectedProducts.length + selectedPackages.length + selectedBundles.length} item
                   </p>
                 </div>
               )}
-
-              {/* Product Selection */}
-              <div className="space-y-2">
-                <Label>Pilih Produk yang Diterapkan</Label>
-                <p className="text-sm text-muted-foreground">
-                  {isOwner && selectedOutlets.length === 0 
-                    ? 'Pilih outlet terlebih dahulu untuk menampilkan produk' 
-                    : 'Pilih produk, paket, atau bundle yang akan mendapatkan promo ini'}
-                </p>
-                
-                {isOwner && selectedOutlets.length === 0 ? (
-                  <div className="border rounded-lg p-8 text-center">
-                    <Package className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      Silakan pilih outlet terlebih dahulu untuk melihat produk yang tersedia
-                    </p>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
-                  {/* Products */}
-                  {productsWithType.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Produk Satuan ({selectedProducts.length}/{productsWithType.length})
-                      </h4>
-                      <div className="space-y-2 ml-6">
-                        {productsWithType.map((product) => (
-                          <div key={product.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`product-${product.id}`}
-                              checked={selectedProducts.includes(product.id)}
-                              onCheckedChange={() => toggleProductSelection(product.id)}
-                            />
-                            <label
-                              htmlFor={`product-${product.id}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                            >
-                              {product.name} - {formatCurrency(product.price)}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Packages */}
-                  {packagesWithType.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <PackagePlus className="h-4 w-4" />
-                        Paket ({selectedPackages.length}/{packagesWithType.length})
-                      </h4>
-                      <div className="space-y-2 ml-6">
-                        {packagesWithType.map((pkg) => (
-                          <div key={pkg.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`package-${pkg.id}`}
-                              checked={selectedPackages.includes(pkg.id)}
-                              onCheckedChange={() => togglePackageSelection(pkg.id)}
-                            />
-                            <label
-                              htmlFor={`package-${pkg.id}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                            >
-                              {pkg.name} - {formatCurrency(pkg.price)}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bundles */}
-                  {bundlesWithType.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Layers className="h-4 w-4" />
-                        Bundle ({selectedBundles.length}/{bundlesWithType.length})
-                      </h4>
-                      <div className="space-y-2 ml-6">
-                        {bundlesWithType.map((bundle) => (
-                          <div key={bundle.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`bundle-${bundle.id}`}
-                              checked={selectedBundles.includes(bundle.id)}
-                              onCheckedChange={() => toggleBundleSelection(bundle.id)}
-                            />
-                            <label
-                              htmlFor={`bundle-${bundle.id}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                            >
-                              {bundle.name} - {formatCurrency(bundle.price)}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                )}
-
-                <p className="text-sm text-muted-foreground mt-2">
-                  Total dipilih: {selectedProducts.length + selectedPackages.length + selectedBundles.length} item
-                </p>
-              </div>
             </div>
             <DialogFooter>
               <Button
