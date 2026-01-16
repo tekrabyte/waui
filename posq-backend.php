@@ -385,6 +385,44 @@ class posq_Backend {
         ) $charset_collate;";
         dbDelta($sql);
 
+        // Table: posq_standalone_promos - NEW FOR STANDALONE PROMOS
+        $sql = "CREATE TABLE {$wpdb->prefix}posq_standalone_promos (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            promo_type varchar(20) DEFAULT 'fixed',
+            promo_value decimal(10,2) DEFAULT 0,
+            promo_days text,
+            promo_start_time time,
+            promo_end_time time,
+            promo_start_date date,
+            promo_end_date date,
+            promo_min_purchase decimal(10,2),
+            promo_description text,
+            is_active tinyint(1) DEFAULT 1,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) $charset_collate;";
+        dbDelta($sql);
+
+        // Add applied_promo_id columns to products, packages, bundles
+        $products_table = $wpdb->prefix . 'posq_products';
+        $products_columns = $wpdb->get_col("DESCRIBE {$products_table}");
+        if (!in_array('applied_promo_id', $products_columns)) {
+            $wpdb->query("ALTER TABLE {$products_table} ADD COLUMN applied_promo_id bigint(20) UNSIGNED NULL AFTER promo_end_time");
+        }
+
+        $packages_table = $wpdb->prefix . 'posq_packages';
+        $packages_columns = $wpdb->get_col("DESCRIBE {$packages_table}");
+        if (!in_array('applied_promo_id', $packages_columns)) {
+            $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN applied_promo_id bigint(20) UNSIGNED NULL AFTER promo_end_time");
+        }
+
+        $bundles_table = $wpdb->prefix . 'posq_bundles';
+        $bundles_columns = $wpdb->get_col("DESCRIBE {$bundles_table}");
+        if (!in_array('applied_promo_id', $bundles_columns)) {
+            $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN applied_promo_id bigint(20) UNSIGNED NULL AFTER promo_end_time");
+        }
+
         // Table: posq_held_orders - NEW
         $sql = "CREATE TABLE {$wpdb->prefix}posq_held_orders (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -894,6 +932,17 @@ class posq_Backend {
             'methods' => 'GET',
             'callback' => [self::class, 'report_cashflow'],
             'permission_callback' => [self::class, 'check_auth']
+        ]);
+
+        // Standalone Promos
+        register_rest_route($namespace, '/standalone-promos', [
+            ['methods' => 'GET', 'callback' => [self::class, 'get_standalone_promos'], 'permission_callback' => [self::class, 'check_auth']],
+            ['methods' => 'POST', 'callback' => [self::class, 'create_standalone_promo'], 'permission_callback' => [self::class, 'check_owner']]
+        ]);
+
+        register_rest_route($namespace, '/standalone-promos/(?P<id>\d+)', [
+            ['methods' => 'PUT', 'callback' => [self::class, 'update_standalone_promo'], 'permission_callback' => [self::class, 'check_owner']],
+            ['methods' => 'DELETE', 'callback' => [self::class, 'delete_standalone_promo'], 'permission_callback' => [self::class, 'check_owner']]
         ]);
 
         // Menu Access
@@ -3411,6 +3460,103 @@ class posq_Backend {
             'id' => $id,
             'status' => $status
         ];
+    }
+
+    /**
+     * Get all standalone promos
+     */
+    public static function get_standalone_promos() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'posq_standalone_promos';
+        
+        $promos = $wpdb->get_results("SELECT * FROM $table WHERE is_active = 1 ORDER BY created_at DESC");
+        
+        $result = [];
+        foreach ($promos as $promo) {
+            $result[] = [
+                'id' => (string) $promo->id,
+                'name' => $promo->name,
+                'promoType' => $promo->promo_type,
+                'promoValue' => (float) $promo->promo_value,
+                'promoDays' => json_decode($promo->promo_days ?: '[]'),
+                'promoStartTime' => $promo->promo_start_time,
+                'promoEndTime' => $promo->promo_end_time,
+                'promoStartDate' => $promo->promo_start_date,
+                'promoEndDate' => $promo->promo_end_date,
+                'promoMinPurchase' => $promo->promo_min_purchase ? (float) $promo->promo_min_purchase : null,
+                'promoDescription' => $promo->promo_description,
+                'isActive' => (bool) $promo->is_active,
+                'createdAt' => $promo->created_at
+            ];
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Create standalone promo
+     */
+    public static function create_standalone_promo($request) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'posq_standalone_promos';
+        
+        $params = $request->get_json_params();
+        
+        $wpdb->insert($table, [
+            'name' => sanitize_text_field($params['name']),
+            'promo_type' => sanitize_text_field($params['promo_type'] ?? 'fixed'),
+            'promo_value' => floatval($params['promo_value'] ?? 0),
+            'promo_days' => $params['promo_days'] ?? '[]',
+            'promo_start_time' => $params['promo_start_time'] ?? null,
+            'promo_end_time' => $params['promo_end_time'] ?? null,
+            'promo_start_date' => $params['promo_start_date'] ?? null,
+            'promo_end_date' => $params['promo_end_date'] ?? null,
+            'promo_min_purchase' => isset($params['promo_min_purchase']) ? floatval($params['promo_min_purchase']) : null,
+            'promo_description' => sanitize_textarea_field($params['promo_description'] ?? ''),
+            'is_active' => 1
+        ]);
+        
+        return ['success' => true, 'id' => (string) $wpdb->insert_id];
+    }
+
+    /**
+     * Update standalone promo
+     */
+    public static function update_standalone_promo($request) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'posq_standalone_promos';
+        
+        $id = $request['id'];
+        $params = $request->get_json_params();
+        
+        $wpdb->update($table, [
+            'name' => sanitize_text_field($params['name']),
+            'promo_type' => sanitize_text_field($params['promo_type'] ?? 'fixed'),
+            'promo_value' => floatval($params['promo_value'] ?? 0),
+            'promo_days' => $params['promo_days'] ?? '[]',
+            'promo_start_time' => $params['promo_start_time'] ?? null,
+            'promo_end_time' => $params['promo_end_time'] ?? null,
+            'promo_start_date' => $params['promo_start_date'] ?? null,
+            'promo_end_date' => $params['promo_end_date'] ?? null,
+            'promo_min_purchase' => isset($params['promo_min_purchase']) ? floatval($params['promo_min_purchase']) : null,
+            'promo_description' => sanitize_textarea_field($params['promo_description'] ?? ''),
+        ], ['id' => $id]);
+        
+        return ['success' => true, 'id' => (string) $id];
+    }
+
+    /**
+     * Delete standalone promo (soft delete)
+     */
+    public static function delete_standalone_promo($request) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'posq_standalone_promos';
+        
+        $id = $request['id'];
+        
+        $wpdb->update($table, ['is_active' => 0], ['id' => $id]);
+        
+        return ['success' => true, 'id' => (string) $id];
     }
 }
 

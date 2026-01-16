@@ -81,6 +81,22 @@ export interface PromoConfig {
   promoDescription?: string; // Optional: promo description
 }
 
+export interface StandalonePromo {
+  id: string;
+  name: string;
+  promoType: 'fixed' | 'percentage';
+  promoValue: number;
+  promoDays: string[];
+  promoStartTime: string;
+  promoEndTime: string;
+  promoStartDate?: string;
+  promoEndDate?: string;
+  promoMinPurchase?: number;
+  promoDescription?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
 // ======================================================
 // PRODUCT & CATALOG
 // ======================================================
@@ -110,6 +126,7 @@ export interface Product {
   promoEndDate?: string;
   promoMinPurchase?: number;
   promoDescription?: string;
+  appliedPromoId?: string; // NEW: Link to standalone promo
 }
 
 export interface ProductPackage {
@@ -144,6 +161,7 @@ export interface ProductPackage {
   promoEndDate?: string;
   promoMinPurchase?: number;
   promoDescription?: string;
+  appliedPromoId?: string; // NEW: Link to standalone promo
 }
 
 // Alias untuk kompatibilitas dengan API
@@ -187,6 +205,7 @@ export interface Bundle {
   promoEndDate?: string;
   promoMinPurchase?: number;
   promoDescription?: string;
+  appliedPromoId?: string; // NEW: Link to standalone promo
 }
 
 export interface Category {
