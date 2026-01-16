@@ -137,6 +137,7 @@ export const useListProductsByOutlet = (outletId?: string) =>
           brand: p.brand,
           categoryId: p.categoryId || p.category_id,
           brandId: p.brandId || p.brand_id,
+          appliedPromoId: p.appliedPromoId || p.applied_promo_id || undefined,
         }));
     },
   });
@@ -332,6 +333,7 @@ export const useListActiveBundles = (outletId?: string | null) =>
           manualStockEnabled: b.manualStockEnabled || b.manual_stock_enabled || false,
           manualStock: b.manualStock || b.manual_stock || undefined,
           categoryId: b.categoryId || b.category_id || undefined,
+          appliedPromoId: b.appliedPromoId || b.applied_promo_id || undefined,
         }));
     },
   });
@@ -576,6 +578,7 @@ export const useListActivePackages = (outletId?: string | null) =>
           manualStock: p.manualStock || p.manual_stock || undefined,
           categoryId: p.categoryId || p.category_id || undefined,
           available: true,
+          appliedPromoId: p.appliedPromoId || p.applied_promo_id || undefined,
         }));
     },
   });

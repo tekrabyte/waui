@@ -81,22 +81,43 @@ export default function PromoManagementPage() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
   const [selectedBundles, setSelectedBundles] = useState<string[]>([]);
+  
+  // Selected outlets for filtering products
+  const [selectedOutlets, setSelectedOutlets] = useState<string[]>([]);
 
   // Convert data to PromoItem with itemType
   const productsWithType = useMemo((): PromoItem[] => {
     if (!products) return [];
+    // Filter by selected outlets if any are selected
+    if (selectedOutlets.length > 0) {
+      return products
+        .filter(p => selectedOutlets.includes(p.outletId || ''))
+        .map(p => ({ ...p, itemType: 'product' as const }));
+    }
     return products.map(p => ({ ...p, itemType: 'product' as const }));
-  }, [products]);
+  }, [products, selectedOutlets]);
 
   const packagesWithType = useMemo((): PromoItem[] => {
     if (!packages) return [];
+    // Filter by selected outlets if any are selected
+    if (selectedOutlets.length > 0) {
+      return packages
+        .filter(p => selectedOutlets.includes(p.outletId || ''))
+        .map(p => ({ ...p, itemType: 'package' as const }));
+    }
     return packages.map(p => ({ ...p, itemType: 'package' as const }));
-  }, [packages]);
+  }, [packages, selectedOutlets]);
 
   const bundlesWithType = useMemo((): PromoItem[] => {
     if (!bundles) return [];
+    // Filter by selected outlets if any are selected
+    if (selectedOutlets.length > 0) {
+      return bundles
+        .filter(b => selectedOutlets.includes(b.outletId || ''))
+        .map(b => ({ ...b, itemType: 'bundle' as const }));
+    }
     return bundles.map(b => ({ ...b, itemType: 'bundle' as const }));
-  }, [bundles]);
+  }, [bundles, selectedOutlets]);
 
   const allItems = useMemo(() => {
     return [...productsWithType, ...packagesWithType, ...bundlesWithType];
@@ -128,6 +149,7 @@ export default function PromoManagementPage() {
     setSelectedProducts([]);
     setSelectedPackages([]);
     setSelectedBundles([]);
+    setSelectedOutlets([]);
     setIsCreateEditDialogOpen(true);
   };
 
@@ -154,6 +176,20 @@ export default function PromoManagementPage() {
     setSelectedProducts(appliedProducts);
     setSelectedPackages(appliedPackages);
     setSelectedBundles(appliedBundles);
+    
+    // Get unique outlets from applied products
+    const outletIds = new Set<string>();
+    products?.filter(p => p.appliedPromoId === promo.id).forEach(p => {
+      if (p.outletId) outletIds.add(p.outletId);
+    });
+    packages?.filter(p => p.appliedPromoId === promo.id).forEach(p => {
+      if (p.outletId) outletIds.add(p.outletId);
+    });
+    bundles?.filter(b => b.appliedPromoId === promo.id).forEach(b => {
+      if (b.outletId) outletIds.add(b.outletId);
+    });
+    setSelectedOutlets(Array.from(outletIds));
+    
     setIsCreateEditDialogOpen(true);
   };
 
@@ -384,6 +420,14 @@ export default function PromoManagementPage() {
       prev.includes(bundleId)
         ? prev.filter(id => id !== bundleId)
         : [...prev, bundleId]
+    );
+  };
+
+  const toggleOutletSelection = (outletId: string) => {
+    setSelectedOutlets(prev =>
+      prev.includes(outletId)
+        ? prev.filter(id => id !== outletId)
+        : [...prev, outletId]
     );
   };
 
@@ -626,14 +670,61 @@ export default function PromoManagementPage() {
                 }}
               />
 
+              {/* Outlet Selection */}
+              {isOwner && outlets && outlets.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Pilih Outlet *</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Pilih outlet untuk menampilkan produk yang tersedia di outlet tersebut
+                  </p>
+                  
+                  <div className="border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
+                    {outlets.map((outlet) => (
+                      <div key={outlet.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`outlet-${outlet.id}`}
+                          checked={selectedOutlets.includes(outlet.id)}
+                          onCheckedChange={() => toggleOutletSelection(outlet.id)}
+                        />
+                        <label
+                          htmlFor={`outlet-${outlet.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                        >
+                          {outlet.name}
+                          {outlet.address && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({outlet.address})
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Total dipilih: {selectedOutlets.length} outlet
+                  </p>
+                </div>
+              )}
+
               {/* Product Selection */}
               <div className="space-y-2">
                 <Label>Pilih Produk yang Diterapkan</Label>
                 <p className="text-sm text-muted-foreground">
-                  Pilih produk, paket, atau bundle yang akan mendapatkan promo ini
+                  {isOwner && selectedOutlets.length === 0 
+                    ? 'Pilih outlet terlebih dahulu untuk menampilkan produk' 
+                    : 'Pilih produk, paket, atau bundle yang akan mendapatkan promo ini'}
                 </p>
                 
-                <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
+                {isOwner && selectedOutlets.length === 0 ? (
+                  <div className="border rounded-lg p-8 text-center">
+                    <Package className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Silakan pilih outlet terlebih dahulu untuk melihat produk yang tersedia
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
                   {/* Products */}
                   {productsWithType.length > 0 && (
                     <div>
@@ -715,6 +806,7 @@ export default function PromoManagementPage() {
                     </div>
                   )}
                 </div>
+                )}
 
                 <p className="text-sm text-muted-foreground mt-2">
                   Total dipilih: {selectedProducts.length + selectedPackages.length + selectedBundles.length} item
