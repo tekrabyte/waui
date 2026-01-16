@@ -25,6 +25,7 @@ import SettingsPage from './components/admin/SettingsPage';
 import KioskPage from './components/admin/KioskPage';
 import POSPage from './components/admin/POSPage';
 import TableManagementPage from './components/admin/TableManagementPage';
+import PromoManagementPage from './components/admin/PromoManagementPage';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -230,6 +231,7 @@ export function App() {
           {adminPage === 'reports' && <ReportsPage />}
           {adminPage === 'cashflow' && <CashflowPage />}
           {adminPage === 'payments' && <PaymentSettingsPage />}
+          {adminPage === 'promo' && <PromoManagementPage />}
           {adminPage === 'settings' && <SettingsPage />}
         </AdminLayout>
       </>

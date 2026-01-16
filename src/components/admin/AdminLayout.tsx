@@ -54,6 +54,7 @@ export function AdminLayout({ children, activePage, onNavigate, onLogout }: Admi
     { id: 'inventory', label: 'Inventory', icon: Boxes },
     { id: 'categorybrand', label: 'Kategori & Brand', icon: Tags },
     { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'promo', label: 'Promos', icon: FileText },
     { id: 'cashflow', label: 'Cashflow', icon: DollarSign },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },

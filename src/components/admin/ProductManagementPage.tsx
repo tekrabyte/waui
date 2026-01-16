@@ -31,7 +31,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageUpload } from '../ImageUpload';
-import type { Product, ProductPackage, Bundle } from '../../types/types';
+import PromoConfigForm from '../PromoConfigForm';
+import type { Product, ProductPackage, Bundle, PromoConfig } from '../../types/types';
 import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
 import { getInitials, getColorFromString } from '../../lib/utils';
 
@@ -92,6 +93,16 @@ export default function ProductManagementPage() {
     imageUrl: '',
   });
 
+  // Promo config for product
+  const [productPromoConfig, setProductPromoConfig] = useState<Partial<PromoConfig>>({
+    promoEnabled: false,
+    promoType: 'fixed',
+    promoValue: 0,
+    promoDays: [],
+    promoStartTime: '',
+    promoEndTime: '',
+  });
+
   // Package form
   const [packageForm, setPackageForm] = useState({
     name: '',
@@ -101,6 +112,16 @@ export default function ProductManagementPage() {
     imageUrl: '',
   });
   const [packageComponents, setPackageComponents] = useState<ComponentInput[]>([{ productId: '', quantity: '1' }]);
+
+  // Promo config for package
+  const [packagePromoConfig, setPackagePromoConfig] = useState<Partial<PromoConfig>>({
+    promoEnabled: false,
+    promoType: 'fixed',
+    promoValue: 0,
+    promoDays: [],
+    promoStartTime: '',
+    promoEndTime: '',
+  });
 
   // Bundle form
   const [bundleForm, setBundleForm] = useState({
@@ -113,6 +134,16 @@ export default function ProductManagementPage() {
     imageUrl: '',
   });
   const [bundleItems, setBundleItems] = useState<BundleItemInput[]>([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+
+  // Promo config for bundle
+  const [bundlePromoConfig, setBundlePromoConfig] = useState<Partial<PromoConfig>>({
+    promoEnabled: false,
+    promoType: 'fixed',
+    promoValue: 0,
+    promoDays: [],
+    promoStartTime: '',
+    promoEndTime: '',
+  });
 
   // Calculate stocks dynamically
   const packagesWithStock = useMemo(() => {
@@ -186,6 +217,14 @@ export default function ProductManagementPage() {
       brandId: 'none',
       imageUrl: '',
     });
+    setProductPromoConfig({
+      promoEnabled: false,
+      promoType: 'fixed',
+      promoValue: 0,
+      promoDays: [],
+      promoStartTime: '',
+      promoEndTime: '',
+    });
     setPackageForm({ 
       name: '', 
       price: '', 
@@ -194,6 +233,14 @@ export default function ProductManagementPage() {
       imageUrl: '',
     });
     setPackageComponents([{ productId: '', quantity: '1' }]);
+    setPackagePromoConfig({
+      promoEnabled: false,
+      promoType: 'fixed',
+      promoValue: 0,
+      promoDays: [],
+      promoStartTime: '',
+      promoEndTime: '',
+    });
     setBundleForm({ 
       name: '', 
       price: '', 
@@ -204,6 +251,14 @@ export default function ProductManagementPage() {
       imageUrl: '',
     });
     setBundleItems([{ productId: '', packageId: '', quantity: '1', isPackage: false }]);
+    setBundlePromoConfig({
+      promoEnabled: false,
+      promoType: 'fixed',
+      promoValue: 0,
+      promoDays: [],
+      promoStartTime: '',
+      promoEndTime: '',
+    });
   };
 
   const handleAdd = () => {
@@ -225,6 +280,20 @@ export default function ProductManagementPage() {
         outletId: String(item.outletId || ''),
         categoryId: (item as any).categoryId ? String((item as any).categoryId) : ((item as any).category_id ? String((item as any).category_id) : 'none'),
         imageUrl: item.image || '',
+      });
+
+      // Populate promo config for package
+      setPackagePromoConfig({
+        promoEnabled: item.promoEnabled || false,
+        promoType: item.promoType || 'fixed',
+        promoValue: item.promoValue || 0,
+        promoDays: item.promoDays || [],
+        promoStartTime: item.promoStartTime || '',
+        promoEndTime: item.promoEndTime || '',
+        promoStartDate: item.promoStartDate,
+        promoEndDate: item.promoEndDate,
+        promoMinPurchase: item.promoMinPurchase,
+        promoDescription: item.promoDescription,
       });
 
       // Safe mapping for components
@@ -254,6 +323,20 @@ export default function ProductManagementPage() {
         imageUrl: item.image || '',
       });
 
+      // Populate promo config for bundle
+      setBundlePromoConfig({
+        promoEnabled: item.promoEnabled || false,
+        promoType: item.promoType || 'fixed',
+        promoValue: item.promoValue || 0,
+        promoDays: item.promoDays || [],
+        promoStartTime: item.promoStartTime || '',
+        promoEndTime: item.promoEndTime || '',
+        promoStartDate: item.promoStartDate,
+        promoEndDate: item.promoEndDate,
+        promoMinPurchase: item.promoMinPurchase,
+        promoDescription: item.promoDescription,
+      });
+
       const rawItems = item.items || [];
       const mappedItems = Array.isArray(rawItems) ? rawItems.map((i: any) => ({
         productId: i.isPackage ? '' : (i.productId ? String(i.productId) : (i.product_id ? String(i.product_id) : '')),
@@ -276,6 +359,20 @@ export default function ProductManagementPage() {
         brandId: p.brandId ? String(p.brandId) : (p.brand_id ? String(p.brand_id) : 'none'),
         imageUrl: p.image || '',
       });
+
+      // Populate promo config for product
+      setProductPromoConfig({
+        promoEnabled: p.promoEnabled || false,
+        promoType: p.promoType || 'fixed',
+        promoValue: p.promoValue || 0,
+        promoDays: p.promoDays || [],
+        promoStartTime: p.promoStartTime || '',
+        promoEndTime: p.promoEndTime || '',
+        promoStartDate: p.promoStartDate,
+        promoEndDate: p.promoEndDate,
+        promoMinPurchase: p.promoMinPurchase,
+        promoDescription: p.promoDescription,
+      });
     }
     setIsEditDialogOpen(true);
   };
@@ -295,6 +392,22 @@ export default function ProductManagementPage() {
         return;
       }
 
+      // Prepare promo data
+      const promoData = productPromoConfig.promoEnabled ? {
+        promo_enabled: 1,
+        promo_type: productPromoConfig.promoType || 'fixed',
+        promo_value: productPromoConfig.promoValue || 0,
+        promo_days: JSON.stringify(productPromoConfig.promoDays || []),
+        promo_start_time: productPromoConfig.promoStartTime || null,
+        promo_end_time: productPromoConfig.promoEndTime || null,
+        promo_start_date: productPromoConfig.promoStartDate || null,
+        promo_end_date: productPromoConfig.promoEndDate || null,
+        promo_min_purchase: productPromoConfig.promoMinPurchase || null,
+        promo_description: productPromoConfig.promoDescription || null,
+      } : {
+        promo_enabled: 0,
+      };
+
       addProduct.mutate(
         {
           name: productForm.name,
@@ -304,6 +417,7 @@ export default function ProductManagementPage() {
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
           image_url: productForm.imageUrl || undefined,
+          ...promoData,
         },
         {
           onSuccess: () => {
@@ -325,6 +439,22 @@ export default function ProductManagementPage() {
         quantity: Number(c.quantity),
       }));
 
+      // Prepare promo data
+      const promoData = packagePromoConfig.promoEnabled ? {
+        promo_enabled: 1,
+        promo_type: packagePromoConfig.promoType || 'fixed',
+        promo_value: packagePromoConfig.promoValue || 0,
+        promo_days: JSON.stringify(packagePromoConfig.promoDays || []),
+        promo_start_time: packagePromoConfig.promoStartTime || null,
+        promo_end_time: packagePromoConfig.promoEndTime || null,
+        promo_start_date: packagePromoConfig.promoStartDate || null,
+        promo_end_date: packagePromoConfig.promoEndDate || null,
+        promo_min_purchase: packagePromoConfig.promoMinPurchase || null,
+        promo_description: packagePromoConfig.promoDescription || null,
+      } : {
+        promo_enabled: 0,
+      };
+
       createPackage.mutate(
         {
           name: packageForm.name,
@@ -333,6 +463,7 @@ export default function ProductManagementPage() {
           components,
           categoryId: packageForm.categoryId !== 'none' ? Number(packageForm.categoryId) : null,
           image_url: packageForm.imageUrl || undefined,
+          ...promoData,
         },
         {
           onSuccess: () => {
@@ -367,6 +498,22 @@ export default function ProductManagementPage() {
         isPackage: i.isPackage,
       }));
 
+      // Prepare promo data
+      const promoData = bundlePromoConfig.promoEnabled ? {
+        promo_enabled: 1,
+        promo_type: bundlePromoConfig.promoType || 'fixed',
+        promo_value: bundlePromoConfig.promoValue || 0,
+        promo_days: JSON.stringify(bundlePromoConfig.promoDays || []),
+        promo_start_time: bundlePromoConfig.promoStartTime || null,
+        promo_end_time: bundlePromoConfig.promoEndTime || null,
+        promo_start_date: bundlePromoConfig.promoStartDate || null,
+        promo_end_date: bundlePromoConfig.promoEndDate || null,
+        promo_min_purchase: bundlePromoConfig.promoMinPurchase || null,
+        promo_description: bundlePromoConfig.promoDescription || null,
+      } : {
+        promo_enabled: 0,
+      };
+
       const bundleData: any = {
         name: bundleForm.name,
         price: Number(bundleForm.price),
@@ -374,6 +521,7 @@ export default function ProductManagementPage() {
         items,
         categoryId: bundleForm.categoryId !== 'none' ? Number(bundleForm.categoryId) : null,
         image_url: bundleForm.imageUrl || undefined,
+        ...promoData,
       };
 
       // Add manual stock if enabled
@@ -410,6 +558,23 @@ export default function ProductManagementPage() {
         productId: Number(c.productId),
         quantity: Number(c.quantity),
       }));
+
+      // Prepare promo data
+      const promoData = packagePromoConfig.promoEnabled ? {
+        promo_enabled: 1,
+        promo_type: packagePromoConfig.promoType || 'fixed',
+        promo_value: packagePromoConfig.promoValue || 0,
+        promo_days: JSON.stringify(packagePromoConfig.promoDays || []),
+        promo_start_time: packagePromoConfig.promoStartTime || null,
+        promo_end_time: packagePromoConfig.promoEndTime || null,
+        promo_start_date: packagePromoConfig.promoStartDate || null,
+        promo_end_date: packagePromoConfig.promoEndDate || null,
+        promo_min_purchase: packagePromoConfig.promoMinPurchase || null,
+        promo_description: packagePromoConfig.promoDescription || null,
+      } : {
+        promo_enabled: 0,
+      };
+
       updatePackage.mutate(
         {
           id: selectedItem.id,
@@ -418,6 +583,7 @@ export default function ProductManagementPage() {
           components,
           categoryId: packageForm.categoryId !== 'none' ? Number(packageForm.categoryId) : null,
           image_url: packageForm.imageUrl || undefined,
+          ...promoData,
         },
         {
           onSuccess: () => {
@@ -453,6 +619,22 @@ export default function ProductManagementPage() {
         isPackage: i.isPackage,
       }));
 
+      // Prepare promo data
+      const promoData = bundlePromoConfig.promoEnabled ? {
+        promo_enabled: 1,
+        promo_type: bundlePromoConfig.promoType || 'fixed',
+        promo_value: bundlePromoConfig.promoValue || 0,
+        promo_days: JSON.stringify(bundlePromoConfig.promoDays || []),
+        promo_start_time: bundlePromoConfig.promoStartTime || null,
+        promo_end_time: bundlePromoConfig.promoEndTime || null,
+        promo_start_date: bundlePromoConfig.promoStartDate || null,
+        promo_end_date: bundlePromoConfig.promoEndDate || null,
+        promo_min_purchase: bundlePromoConfig.promoMinPurchase || null,
+        promo_description: bundlePromoConfig.promoDescription || null,
+      } : {
+        promo_enabled: 0,
+      };
+
       const bundleData: any = {
         id: selectedItem.id,
         name: bundleForm.name,
@@ -461,6 +643,7 @@ export default function ProductManagementPage() {
         items,
         categoryId: bundleForm.categoryId !== 'none' ? Number(bundleForm.categoryId) : null,
         image_url: bundleForm.imageUrl || undefined,
+        ...promoData,
       };
 
       // Add manual stock if enabled
@@ -488,6 +671,22 @@ export default function ProductManagementPage() {
       );
     } else {
       // Edit Product
+      // Prepare promo data
+      const promoData = productPromoConfig.promoEnabled ? {
+        promo_enabled: 1,
+        promo_type: productPromoConfig.promoType || 'fixed',
+        promo_value: productPromoConfig.promoValue || 0,
+        promo_days: JSON.stringify(productPromoConfig.promoDays || []),
+        promo_start_time: productPromoConfig.promoStartTime || null,
+        promo_end_time: productPromoConfig.promoEndTime || null,
+        promo_start_date: productPromoConfig.promoStartDate || null,
+        promo_end_date: productPromoConfig.promoEndDate || null,
+        promo_min_purchase: productPromoConfig.promoMinPurchase || null,
+        promo_description: productPromoConfig.promoDescription || null,
+      } : {
+        promo_enabled: 0,
+      };
+
       updateProduct.mutate(
         {
           id: selectedItem.id,
@@ -498,6 +697,7 @@ export default function ProductManagementPage() {
           categoryId: productForm.categoryId !== 'none' ? Number(productForm.categoryId) : null,
           brandId: productForm.brandId !== 'none' ? Number(productForm.brandId) : null,
           image_url: productForm.imageUrl || undefined,
+          ...promoData,
         },
         {
           onSuccess: () => {
@@ -1155,6 +1355,13 @@ export default function ProductManagementPage() {
                       value={productForm.imageUrl}
                       onChange={(url) => setProductForm({ ...productForm, imageUrl: url })}
                       onClear={() => setProductForm({ ...productForm, imageUrl: '' })}
+                    />
+
+                    {/* Promo Configuration for Product */}
+                    <PromoConfigForm
+                      value={productPromoConfig}
+                      onChange={setProductPromoConfig}
+                      originalPrice={Number(productForm.price) || undefined}
                     />
                   </>
                 )}
