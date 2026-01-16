@@ -72,6 +72,18 @@ class posq_Backend {
         if (!in_array('promo_end_time', $products_columns)) {
             $wpdb->query("ALTER TABLE {$products_table} ADD COLUMN promo_end_time time AFTER promo_start_time");
         }
+        if (!in_array('promo_start_date', $products_columns)) {
+            $wpdb->query("ALTER TABLE {$products_table} ADD COLUMN promo_start_date date AFTER promo_end_time");
+        }
+        if (!in_array('promo_end_date', $products_columns)) {
+            $wpdb->query("ALTER TABLE {$products_table} ADD COLUMN promo_end_date date AFTER promo_start_date");
+        }
+        if (!in_array('promo_min_purchase', $products_columns)) {
+            $wpdb->query("ALTER TABLE {$products_table} ADD COLUMN promo_min_purchase decimal(10,2) AFTER promo_end_date");
+        }
+        if (!in_array('promo_description', $products_columns)) {
+            $wpdb->query("ALTER TABLE {$products_table} ADD COLUMN promo_description text AFTER promo_min_purchase");
+        }
 
         // PROMO MANAGEMENT: Add promo columns to packages table
         if (!in_array('promo_enabled', $packages_columns)) {
@@ -92,6 +104,18 @@ class posq_Backend {
         if (!in_array('promo_end_time', $packages_columns)) {
             $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN promo_end_time time AFTER promo_start_time");
         }
+        if (!in_array('promo_start_date', $packages_columns)) {
+            $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN promo_start_date date AFTER promo_end_time");
+        }
+        if (!in_array('promo_end_date', $packages_columns)) {
+            $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN promo_end_date date AFTER promo_start_date");
+        }
+        if (!in_array('promo_min_purchase', $packages_columns)) {
+            $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN promo_min_purchase decimal(10,2) AFTER promo_end_date");
+        }
+        if (!in_array('promo_description', $packages_columns)) {
+            $wpdb->query("ALTER TABLE {$packages_table} ADD COLUMN promo_description text AFTER promo_min_purchase");
+        }
 
         // PROMO MANAGEMENT: Add promo columns to bundles table
         if (!in_array('promo_enabled', $bundles_columns)) {
@@ -111,6 +135,18 @@ class posq_Backend {
         }
         if (!in_array('promo_end_time', $bundles_columns)) {
             $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN promo_end_time time AFTER promo_start_time");
+        }
+        if (!in_array('promo_start_date', $bundles_columns)) {
+            $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN promo_start_date date AFTER promo_end_time");
+        }
+        if (!in_array('promo_end_date', $bundles_columns)) {
+            $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN promo_end_date date AFTER promo_start_date");
+        }
+        if (!in_array('promo_min_purchase', $bundles_columns)) {
+            $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN promo_min_purchase decimal(10,2) AFTER promo_end_date");
+        }
+        if (!in_array('promo_description', $bundles_columns)) {
+            $wpdb->query("ALTER TABLE {$bundles_table} ADD COLUMN promo_description text AFTER promo_min_purchase");
         }
 
         // Update posq_expenses table with new fields for cashflow enhancement
@@ -1770,6 +1806,18 @@ class posq_Backend {
         if (isset($data['promoEndTime'])) {
             $update_data['promo_end_time'] = sanitize_text_field($data['promoEndTime']);
         }
+        if (isset($data['promo_start_date'])) {
+            $update_data['promo_start_date'] = $data['promo_start_date'] ? sanitize_text_field($data['promo_start_date']) : null;
+        }
+        if (isset($data['promo_end_date'])) {
+            $update_data['promo_end_date'] = $data['promo_end_date'] ? sanitize_text_field($data['promo_end_date']) : null;
+        }
+        if (isset($data['promo_min_purchase'])) {
+            $update_data['promo_min_purchase'] = $data['promo_min_purchase'] ? (float) $data['promo_min_purchase'] : null;
+        }
+        if (isset($data['promo_description'])) {
+            $update_data['promo_description'] = sanitize_textarea_field($data['promo_description']);
+        }
 
         $wpdb->update(
             $wpdb->prefix . 'posq_products',
@@ -1903,6 +1951,38 @@ class posq_Backend {
         if (isset($data['imageUrl']) || isset($data['image_url'])) {
             $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
             $update_data['image_url'] = !empty($image_url) ? esc_url_raw($image_url) : null;
+        }
+
+        // PROMO MANAGEMENT: Handle promo fields
+        if (isset($data['promo_enabled'])) {
+            $update_data['promo_enabled'] = (bool) $data['promo_enabled'] ? 1 : 0;
+        }
+        if (isset($data['promo_type'])) {
+            $update_data['promo_type'] = sanitize_text_field($data['promo_type']);
+        }
+        if (isset($data['promo_value'])) {
+            $update_data['promo_value'] = (float) $data['promo_value'];
+        }
+        if (isset($data['promo_days'])) {
+            $update_data['promo_days'] = is_string($data['promo_days']) ? $data['promo_days'] : json_encode($data['promo_days']);
+        }
+        if (isset($data['promo_start_time'])) {
+            $update_data['promo_start_time'] = $data['promo_start_time'] ? sanitize_text_field($data['promo_start_time']) : null;
+        }
+        if (isset($data['promo_end_time'])) {
+            $update_data['promo_end_time'] = $data['promo_end_time'] ? sanitize_text_field($data['promo_end_time']) : null;
+        }
+        if (isset($data['promo_start_date'])) {
+            $update_data['promo_start_date'] = $data['promo_start_date'] ? sanitize_text_field($data['promo_start_date']) : null;
+        }
+        if (isset($data['promo_end_date'])) {
+            $update_data['promo_end_date'] = $data['promo_end_date'] ? sanitize_text_field($data['promo_end_date']) : null;
+        }
+        if (isset($data['promo_min_purchase'])) {
+            $update_data['promo_min_purchase'] = $data['promo_min_purchase'] ? (float) $data['promo_min_purchase'] : null;
+        }
+        if (isset($data['promo_description'])) {
+            $update_data['promo_description'] = sanitize_textarea_field($data['promo_description']);
         }
 
         if (!empty($update_data)) {
@@ -2118,6 +2198,38 @@ class posq_Backend {
         if (isset($data['imageUrl']) || isset($data['image_url'])) {
             $image_url = !empty($data['imageUrl']) ? $data['imageUrl'] : (!empty($data['image_url']) ? $data['image_url'] : null);
             $update_data['image_url'] = !empty($image_url) ? esc_url_raw($image_url) : null;
+        }
+
+        // PROMO MANAGEMENT: Handle promo fields
+        if (isset($data['promo_enabled'])) {
+            $update_data['promo_enabled'] = (bool) $data['promo_enabled'] ? 1 : 0;
+        }
+        if (isset($data['promo_type'])) {
+            $update_data['promo_type'] = sanitize_text_field($data['promo_type']);
+        }
+        if (isset($data['promo_value'])) {
+            $update_data['promo_value'] = (float) $data['promo_value'];
+        }
+        if (isset($data['promo_days'])) {
+            $update_data['promo_days'] = is_string($data['promo_days']) ? $data['promo_days'] : json_encode($data['promo_days']);
+        }
+        if (isset($data['promo_start_time'])) {
+            $update_data['promo_start_time'] = $data['promo_start_time'] ? sanitize_text_field($data['promo_start_time']) : null;
+        }
+        if (isset($data['promo_end_time'])) {
+            $update_data['promo_end_time'] = $data['promo_end_time'] ? sanitize_text_field($data['promo_end_time']) : null;
+        }
+        if (isset($data['promo_start_date'])) {
+            $update_data['promo_start_date'] = $data['promo_start_date'] ? sanitize_text_field($data['promo_start_date']) : null;
+        }
+        if (isset($data['promo_end_date'])) {
+            $update_data['promo_end_date'] = $data['promo_end_date'] ? sanitize_text_field($data['promo_end_date']) : null;
+        }
+        if (isset($data['promo_min_purchase'])) {
+            $update_data['promo_min_purchase'] = $data['promo_min_purchase'] ? (float) $data['promo_min_purchase'] : null;
+        }
+        if (isset($data['promo_description'])) {
+            $update_data['promo_description'] = sanitize_textarea_field($data['promo_description']);
         }
 
         if (!empty($update_data)) {
