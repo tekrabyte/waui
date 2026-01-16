@@ -1,19 +1,35 @@
 import { useState, useMemo } from 'react';
-import { useListProductsByOutlet, useUpdateProduct, useGetCallerUserProfile, useIsCallerAdmin, useListOutlets, useListActivePackages, useUpdatePackage, useListActiveBundles, useUpdateBundle } from '../../hooks/useQueries';
+import { 
+  useListProductsByOutlet, 
+  useUpdateProduct, 
+  useGetCallerUserProfile, 
+  useIsCallerAdmin, 
+  useListOutlets, 
+  useListActivePackages, 
+  useUpdatePackage, 
+  useListActiveBundles, 
+  useUpdateBundle,
+  useListStandalonePromos,
+  useCreateStandalonePromo,
+  useUpdateStandalonePromo,
+  useDeleteStandalonePromo
+} from '../../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tag, Pencil, TrendingUp, Package, PackagePlus, Layers, Filter, Search } from 'lucide-react';
+import { Tag, Pencil, Trash2, Plus, TrendingUp, Package, PackagePlus, Layers, Search, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import PromoConfigForm from '../PromoConfigForm';
-import type { Product, ProductPackage, Bundle, PromoConfig } from '../../types/types';
+import type { Product, ProductPackage, Bundle, StandalonePromo } from '../../types/types';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type PromoItem = (Product | ProductPackage | Bundle) & {
   itemType: 'product' | 'package' | 'bundle';
@@ -23,6 +39,7 @@ export default function PromoManagementPage() {
   const { data: userProfile } = useGetCallerUserProfile();
   const { data: isAdmin } = useIsCallerAdmin();
   const { data: outlets } = useListOutlets();
+  const { data: promos, isLoading: promosLoading } = useListStandalonePromos();
 
   const isOwner = isAdmin;
   const userOutletId = userProfile?.outletId;
@@ -35,23 +52,35 @@ export default function PromoManagementPage() {
   const updateProduct = useUpdateProduct();
   const updatePackage = useUpdatePackage();
   const updateBundle = useUpdateBundle();
+  const createPromo = useCreateStandalonePromo();
+  const updatePromo = useUpdateStandalonePromo();
+  const deletePromo = useDeleteStandalonePromo();
 
-  const [activeTab, setActiveTab] = useState('products');
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<PromoItem | null>(null);
-  const [promoConfig, setPromoConfig] = useState<Partial<PromoConfig>>({
-    promoEnabled: false,
-    promoType: 'fixed',
+  const [isCreateEditDialogOpen, setIsCreateEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewProductsDialogOpen, setIsViewProductsDialogOpen] = useState(false);
+  const [selectedPromo, setSelectedPromo] = useState<StandalonePromo | null>(null);
+  const [promoToDelete, setPromoToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Form state for create/edit promo
+  const [promoForm, setPromoForm] = useState({
+    name: '',
+    promoType: 'fixed' as 'fixed' | 'percentage',
     promoValue: 0,
-    promoDays: [],
+    promoDays: [] as string[],
     promoStartTime: '',
     promoEndTime: '',
+    promoStartDate: '',
+    promoEndDate: '',
+    promoMinPurchase: undefined as number | undefined,
+    promoDescription: '',
   });
 
-  // Filters
-  const [selectedOutletFilter, setSelectedOutletFilter] = useState<string>('all');
-  const [promoStatusFilter, setPromoStatusFilter] = useState<string>('all'); // all, active, inactive
-  const [searchQuery, setSearchQuery] = useState('');
+  // Selected products for applying promo
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
+  const [selectedBundles, setSelectedBundles] = useState<string[]>([]);
 
   // Convert data to PromoItem with itemType
   const productsWithType = useMemo((): PromoItem[] => {
@@ -69,129 +98,261 @@ export default function PromoManagementPage() {
     return bundles.map(b => ({ ...b, itemType: 'bundle' as const }));
   }, [bundles]);
 
-  // Apply filters
-  const filterItems = (items: PromoItem[]) => {
-    return items.filter(item => {
-      // Outlet filter
-      if (selectedOutletFilter !== 'all') {
-        if (selectedOutletFilter === 'factory') {
-          const outletId = item.outletId;
-          if (outletId && outletId !== '' && outletId !== 'null' && outletId !== '0') {
-            return false;
-          }
-        } else {
-          if (String(item.outletId) !== selectedOutletFilter) {
-            return false;
-          }
-        }
-      }
+  const allItems = useMemo(() => {
+    return [...productsWithType, ...packagesWithType, ...bundlesWithType];
+  }, [productsWithType, packagesWithType, bundlesWithType]);
 
-      // Promo status filter
-      if (promoStatusFilter === 'active' && !item.promoEnabled) return false;
-      if (promoStatusFilter === 'inactive' && item.promoEnabled) return false;
+  // Filter promos by search
+  const filteredPromos = useMemo(() => {
+    if (!promos) return [];
+    if (!searchQuery) return promos;
+    return promos.filter(promo => 
+      promo.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [promos, searchQuery]);
 
-      // Search filter
-      if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-
-      return true;
+  const handleCreatePromo = () => {
+    setSelectedPromo(null);
+    setPromoForm({
+      name: '',
+      promoType: 'fixed',
+      promoValue: 0,
+      promoDays: [],
+      promoStartTime: '',
+      promoEndTime: '',
+      promoStartDate: '',
+      promoEndDate: '',
+      promoMinPurchase: undefined,
+      promoDescription: '',
     });
+    setSelectedProducts([]);
+    setSelectedPackages([]);
+    setSelectedBundles([]);
+    setIsCreateEditDialogOpen(true);
   };
 
-  const filteredProducts = useMemo(() => filterItems(productsWithType), [productsWithType, selectedOutletFilter, promoStatusFilter, searchQuery]);
-  const filteredPackages = useMemo(() => filterItems(packagesWithType), [packagesWithType, selectedOutletFilter, promoStatusFilter, searchQuery]);
-  const filteredBundles = useMemo(() => filterItems(bundlesWithType), [bundlesWithType, selectedOutletFilter, promoStatusFilter, searchQuery]);
-
-  const handleEditPromo = (item: PromoItem) => {
-    setSelectedItem(item);
-    setPromoConfig({
-      promoEnabled: item.promoEnabled || false,
-      promoType: item.promoType || 'fixed',
-      promoValue: item.promoValue || 0,
-      promoDays: item.promoDays || [],
-      promoStartTime: item.promoStartTime || '',
-      promoEndTime: item.promoEndTime || '',
-      promoStartDate: item.promoStartDate,
-      promoEndDate: item.promoEndDate,
-      promoMinPurchase: item.promoMinPurchase,
-      promoDescription: item.promoDescription,
+  const handleEditPromo = (promo: StandalonePromo) => {
+    setSelectedPromo(promo);
+    setPromoForm({
+      name: promo.name,
+      promoType: promo.promoType,
+      promoValue: promo.promoValue,
+      promoDays: promo.promoDays || [],
+      promoStartTime: promo.promoStartTime || '',
+      promoEndTime: promo.promoEndTime || '',
+      promoStartDate: promo.promoStartDate || '',
+      promoEndDate: promo.promoEndDate || '',
+      promoMinPurchase: promo.promoMinPurchase,
+      promoDescription: promo.promoDescription || '',
     });
-    setIsEditDialogOpen(true);
+
+    // Load products that have this promo applied
+    const appliedProducts = products?.filter(p => p.appliedPromoId === promo.id).map(p => p.id) || [];
+    const appliedPackages = packages?.filter(p => p.appliedPromoId === promo.id).map(p => p.id) || [];
+    const appliedBundles = bundles?.filter(b => b.appliedPromoId === promo.id).map(b => b.id) || [];
+
+    setSelectedProducts(appliedProducts);
+    setSelectedPackages(appliedPackages);
+    setSelectedBundles(appliedBundles);
+    setIsCreateEditDialogOpen(true);
   };
 
   const handleSubmitPromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedItem) return;
+
+    if (!promoForm.name.trim()) {
+      toast.error('Nama promo harus diisi!');
+      return;
+    }
 
     try {
-      const promoData = {
-        promo_enabled: promoConfig.promoEnabled ? 1 : 0,
-        promo_type: promoConfig.promoType || 'fixed',
-        promo_value: promoConfig.promoValue || 0,
-        promo_days: JSON.stringify(promoConfig.promoDays || []),
-        promo_start_time: promoConfig.promoStartTime || null,
-        promo_end_time: promoConfig.promoEndTime || null,
-        promo_start_date: promoConfig.promoStartDate || null,
-        promo_end_date: promoConfig.promoEndDate || null,
-        promo_min_purchase: promoConfig.promoMinPurchase || null,
-        promo_description: promoConfig.promoDescription || null,
-      };
+      let promoId = selectedPromo?.id;
 
-      if (selectedItem.itemType === 'product') {
-        await updateProduct.mutateAsync({
-          id: selectedItem.id,
-          name: selectedItem.name,
-          price: selectedItem.price,
-          stock: (selectedItem as Product).stock,
-          outletId: selectedItem.outletId || null,
-          categoryId: selectedItem.categoryId ? Number(selectedItem.categoryId) : null,
-          brandId: (selectedItem as Product).brandId ? Number((selectedItem as Product).brandId) : null,
-          image_url: selectedItem.image || undefined,
-          ...promoData,
+      // Create or update standalone promo
+      if (selectedPromo) {
+        await updatePromo.mutateAsync({
+          id: selectedPromo.id,
+          data: promoForm,
         });
-      } else if (selectedItem.itemType === 'package') {
-        const pkg = selectedItem as ProductPackage;
-        await updatePackage.mutateAsync({
-          id: pkg.id,
-          name: pkg.name,
-          price: pkg.price,
-          components: (pkg.components || []).map(c => ({
-            productId: Number(c.productId),
-            quantity: c.quantity,
-          })),
-          categoryId: pkg.categoryId ? Number(pkg.categoryId) : null,
-          image_url: pkg.image || undefined,
-          ...promoData,
-        });
-      } else if (selectedItem.itemType === 'bundle') {
-        const bundle = selectedItem as Bundle;
-        await updateBundle.mutateAsync({
-          id: bundle.id,
-          name: bundle.name,
-          price: bundle.price,
-          outletId: bundle.outletId ? Number(bundle.outletId) : 0,
-          items: (bundle.items || []).map(i => ({
-            productId: i.isPackage ? 0 : Number(i.productId),
-            packageId: i.isPackage ? Number(i.packageId) : null,
-            quantity: i.quantity,
-            isPackage: i.isPackage || false,
-          })),
-          categoryId: bundle.categoryId ? Number(bundle.categoryId) : null,
-          image_url: bundle.image || undefined,
-          manualStockEnabled: bundle.manualStockEnabled,
-          manualStock: bundle.manualStock ? Number(bundle.manualStock) : null,
-          ...promoData,
-        });
+        toast.success('Promo berhasil diperbarui!');
+      } else {
+        const result = await createPromo.mutateAsync(promoForm);
+        promoId = result.id;
+        toast.success('Promo berhasil dibuat!');
       }
 
-      toast.success('Promo berhasil diperbarui!');
-      setIsEditDialogOpen(false);
-      setSelectedItem(null);
+      // Apply promo to selected products
+      if (promoId) {
+        await applyPromoToProducts(promoId);
+      }
+
+      setIsCreateEditDialogOpen(false);
+      setSelectedPromo(null);
     } catch (err) {
-      console.error('Error updating promo:', err);
-      toast.error('Gagal memperbarui promo. Silakan coba lagi.');
+      console.error('Error saving promo:', err);
+      toast.error('Gagal menyimpan promo. Silakan coba lagi.');
     }
+  };
+
+  const applyPromoToProducts = async (promoId: string) => {
+    try {
+      // Update products
+      for (const productId of selectedProducts) {
+        const product = products?.find(p => p.id === productId);
+        if (product) {
+          await updateProduct.mutateAsync({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            stock: product.stock,
+            outletId: product.outletId || null,
+            categoryId: product.categoryId ? Number(product.categoryId) : null,
+            brandId: product.brandId ? Number(product.brandId) : null,
+            image_url: product.image || undefined,
+            applied_promo_id: promoId,
+          });
+        }
+      }
+
+      // Update packages
+      for (const packageId of selectedPackages) {
+        const pkg = packages?.find(p => p.id === packageId);
+        if (pkg) {
+          await updatePackage.mutateAsync({
+            id: pkg.id,
+            name: pkg.name,
+            price: pkg.price,
+            components: (pkg.components || []).map(c => ({
+              productId: Number(c.productId),
+              quantity: c.quantity,
+            })),
+            categoryId: pkg.categoryId ? Number(pkg.categoryId) : null,
+            image_url: pkg.image || undefined,
+            applied_promo_id: promoId,
+          });
+        }
+      }
+
+      // Update bundles
+      for (const bundleId of selectedBundles) {
+        const bundle = bundles?.find(b => b.id === bundleId);
+        if (bundle) {
+          await updateBundle.mutateAsync({
+            id: bundle.id,
+            name: bundle.name,
+            price: bundle.price,
+            outletId: bundle.outletId ? Number(bundle.outletId) : 0,
+            items: (bundle.items || []).map(i => ({
+              productId: i.isPackage ? 0 : Number(i.productId),
+              packageId: i.isPackage ? Number(i.packageId) : null,
+              quantity: i.quantity,
+              isPackage: i.isPackage || false,
+            })),
+            categoryId: bundle.categoryId ? Number(bundle.categoryId) : null,
+            image_url: bundle.image || undefined,
+            manualStockEnabled: bundle.manualStockEnabled,
+            manualStock: bundle.manualStock ? Number(bundle.manualStock) : null,
+            applied_promo_id: promoId,
+          });
+        }
+      }
+
+      // Remove promo from deselected items
+      const currentAppliedProducts = products?.filter(p => p.appliedPromoId === promoId) || [];
+      const currentAppliedPackages = packages?.filter(p => p.appliedPromoId === promoId) || [];
+      const currentAppliedBundles = bundles?.filter(b => b.appliedPromoId === promoId) || [];
+
+      for (const product of currentAppliedProducts) {
+        if (!selectedProducts.includes(product.id)) {
+          await updateProduct.mutateAsync({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            stock: product.stock,
+            outletId: product.outletId || null,
+            categoryId: product.categoryId ? Number(product.categoryId) : null,
+            brandId: product.brandId ? Number(product.brandId) : null,
+            image_url: product.image || undefined,
+            applied_promo_id: null,
+          });
+        }
+      }
+
+      for (const pkg of currentAppliedPackages) {
+        if (!selectedPackages.includes(pkg.id)) {
+          await updatePackage.mutateAsync({
+            id: pkg.id,
+            name: pkg.name,
+            price: pkg.price,
+            components: (pkg.components || []).map(c => ({
+              productId: Number(c.productId),
+              quantity: c.quantity,
+            })),
+            categoryId: pkg.categoryId ? Number(pkg.categoryId) : null,
+            image_url: pkg.image || undefined,
+            applied_promo_id: null,
+          });
+        }
+      }
+
+      for (const bundle of currentAppliedBundles) {
+        if (!selectedBundles.includes(bundle.id)) {
+          await updateBundle.mutateAsync({
+            id: bundle.id,
+            name: bundle.name,
+            price: bundle.price,
+            outletId: bundle.outletId ? Number(bundle.outletId) : 0,
+            items: (bundle.items || []).map(i => ({
+              productId: i.isPackage ? 0 : Number(i.productId),
+              packageId: i.isPackage ? Number(i.packageId) : null,
+              quantity: i.quantity,
+              isPackage: i.isPackage || false,
+            })),
+            categoryId: bundle.categoryId ? Number(bundle.categoryId) : null,
+            image_url: bundle.image || undefined,
+            manualStockEnabled: bundle.manualStockEnabled,
+            manualStock: bundle.manualStock ? Number(bundle.manualStock) : null,
+            applied_promo_id: null,
+          });
+        }
+      }
+
+      toast.success('Promo berhasil diterapkan ke produk!');
+    } catch (err) {
+      console.error('Error applying promo to products:', err);
+      toast.error('Gagal menerapkan promo ke produk.');
+    }
+  };
+
+  const handleDeletePromo = async () => {
+    if (!promoToDelete) return;
+
+    try {
+      await deletePromo.mutateAsync(promoToDelete);
+      toast.success('Promo berhasil dihapus!');
+      setIsDeleteDialogOpen(false);
+      setPromoToDelete(null);
+    } catch (err) {
+      console.error('Error deleting promo:', err);
+      toast.error('Gagal menghapus promo. Silakan coba lagi.');
+    }
+  };
+
+  const handleViewProducts = (promo: StandalonePromo) => {
+    setSelectedPromo(promo);
+    setIsViewProductsDialogOpen(true);
+  };
+
+  const getAppliedItemsForPromo = (promoId: string) => {
+    const appliedProducts = products?.filter(p => p.appliedPromoId === promoId) || [];
+    const appliedPackages = packages?.filter(p => p.appliedPromoId === promoId) || [];
+    const appliedBundles = bundles?.filter(b => b.appliedPromoId === promoId) || [];
+
+    return [
+      ...appliedProducts.map(p => ({ ...p, itemType: 'product' as const })),
+      ...appliedPackages.map(p => ({ ...p, itemType: 'package' as const })),
+      ...appliedBundles.map(b => ({ ...b, itemType: 'bundle' as const })),
+    ];
   };
 
   const formatCurrency = (amount: number) => {
@@ -202,141 +363,39 @@ export default function PromoManagementPage() {
     }).format(Number(amount));
   };
 
-  const calculatePromoPrice = (item: PromoItem) => {
-    if (!item.promoEnabled || !item.promoValue) return null;
-    
-    if (item.promoType === 'percentage') {
-      const discount = (item.price * item.promoValue) / 100;
-      return item.price - discount;
-    } else {
-      return item.price - item.promoValue;
-    }
-  };
-
-  const getOutletName = (outletId?: string | null) => {
-    if (!outletId || outletId === '' || outletId === 'null' || outletId === '0') {
-      return 'Stok Pabrik';
-    }
-    const outlet = outlets?.find(o => o.id === outletId.toString());
-    return outlet?.name || `Outlet #${outletId}`;
-  };
-
-  const isLoading = productsLoading || packagesLoading || bundlesLoading;
-
-  const renderPromoTable = (items: PromoItem[], emptyIcon: React.ReactNode, emptyMessage: string) => {
-    if (isLoading) {
-      return (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      );
-    }
-
-    if (items.length === 0) {
-      return (
-        <div className="text-center py-12">
-          {emptyIcon}
-          <h3 className="mt-4 text-lg font-semibold">{emptyMessage}</h3>
-          <p className="text-sm text-muted-foreground mt-2">
-            {searchQuery || promoStatusFilter !== 'all' || selectedOutletFilter !== 'all'
-              ? 'Coba ubah filter pencarian'
-              : 'Belum ada item untuk dikonfigurasi promo'}
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nama Item</TableHead>
-              {isOwner && <TableHead>Outlet</TableHead>}
-              <TableHead>Harga Normal</TableHead>
-              <TableHead>Status Promo</TableHead>
-              <TableHead>Diskon</TableHead>
-              <TableHead>Harga Promo</TableHead>
-              <TableHead>Hari Berlaku</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => {
-              const promoPrice = calculatePromoPrice(item);
-              const promoDaysCount = item.promoDays?.length || 0;
-              
-              return (
-                <TableRow key={`${item.itemType}-${item.id}`}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  {isOwner && <TableCell>{getOutletName(item.outletId)}</TableCell>}
-                  <TableCell>{formatCurrency(item.price)}</TableCell>
-                  <TableCell>
-                    {item.promoEnabled ? (
-                      <Badge className="bg-green-500 hover:bg-green-600">
-                        <Tag className="h-3 w-3 mr-1" />
-                        Aktif
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        Tidak Aktif
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.promoEnabled && item.promoValue ? (
-                      <span className="text-orange-600 font-semibold">
-                        {item.promoType === 'percentage' 
-                          ? `${item.promoValue}%` 
-                          : formatCurrency(item.promoValue)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {promoPrice !== null && promoPrice >= 0 ? (
-                      <div className="flex flex-col">
-                        <span className="font-bold text-green-600">
-                          {formatCurrency(promoPrice)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Hemat {formatCurrency(item.price - promoPrice)}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.promoEnabled && promoDaysCount > 0 ? (
-                      <Badge variant="secondary">
-                        {promoDaysCount === 7 ? 'Setiap Hari' : `${promoDaysCount} Hari`}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditPromo(item)}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      {item.promoEnabled ? 'Edit Promo' : 'Aktifkan Promo'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
     );
   };
+
+  const togglePackageSelection = (packageId: string) => {
+    setSelectedPackages(prev =>
+      prev.includes(packageId)
+        ? prev.filter(id => id !== packageId)
+        : [...prev, packageId]
+    );
+  };
+
+  const toggleBundleSelection = (bundleId: string) => {
+    setSelectedBundles(prev =>
+      prev.includes(bundleId)
+        ? prev.filter(id => id !== bundleId)
+        : [...prev, bundleId]
+    );
+  };
+
+  const isLoading = promosLoading || productsLoading || packagesLoading || bundlesLoading;
+
+  const totalActivePromos = filteredPromos.filter(p => p.isActive).length;
+  const totalAppliedProducts = useMemo(() => {
+    const productCount = products?.filter(p => p.appliedPromoId).length || 0;
+    const packageCount = packages?.filter(p => p.appliedPromoId).length || 0;
+    const bundleCount = bundles?.filter(b => b.appliedPromoId).length || 0;
+    return productCount + packageCount + bundleCount;
+  }, [products, packages, bundles]);
 
   return (
     <div className="space-y-6">
@@ -351,222 +410,436 @@ export default function PromoManagementPage() {
             Kelola promo untuk produk satuan, paket, dan bundle
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Badge variant="secondary" className="text-lg px-4 py-2">
             <TrendingUp className="h-4 w-4 mr-2" />
-            {filteredProducts.filter(p => p.promoEnabled).length + 
-             filteredPackages.filter(p => p.promoEnabled).length + 
-             filteredBundles.filter(b => b.promoEnabled).length} Promo Aktif
+            {totalActivePromos} Promo Aktif
+          </Badge>
+          <Badge variant="outline" className="text-lg px-4 py-2">
+            {totalAppliedProducts} Item dengan Promo
           </Badge>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search and Create */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="space-y-2">
-              <Label htmlFor="search" className="flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Cari Item
-              </Label>
-              <Input
-                id="search"
-                placeholder="Nama produk, paket, atau bundle..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Outlet Filter */}
-            {isOwner && outlets && outlets.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="outlet-filter" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filter Outlet
-                </Label>
-                <Select value={selectedOutletFilter} onValueChange={setSelectedOutletFilter}>
-                  <SelectTrigger id="outlet-filter">
-                    <SelectValue placeholder="Pilih outlet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Outlet</SelectItem>
-                    <SelectItem value="factory">Stok Pabrik</SelectItem>
-                    {outlets.map((outlet) => (
-                      <SelectItem key={outlet.id} value={outlet.id}>
-                        {outlet.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari promo..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-            )}
-
-            {/* Promo Status Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="promo-filter" className="flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                Status Promo
-              </Label>
-              <Select value={promoStatusFilter} onValueChange={setPromoStatusFilter}>
-                <SelectTrigger id="promo-filter">
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="active">Promo Aktif</SelectItem>
-                  <SelectItem value="inactive">Promo Tidak Aktif</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
+            <Button onClick={handleCreatePromo} data-testid="create-promo-btn">
+              <Plus className="h-4 w-4 mr-2" />
+              Buat Promo Baru
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Active Filters Display */}
-          {(searchQuery || selectedOutletFilter !== 'all' || promoStatusFilter !== 'all') && (
-            <div className="flex items-center gap-2 mt-4">
-              <span className="text-sm text-muted-foreground">Filter aktif:</span>
-              {searchQuery && (
-                <Badge variant="secondary">
-                  Pencarian: {searchQuery}
-                </Badge>
-              )}
-              {selectedOutletFilter !== 'all' && (
-                <Badge variant="secondary">
-                  Outlet: {selectedOutletFilter === 'factory' ? 'Stok Pabrik' : getOutletName(selectedOutletFilter)}
-                </Badge>
-              )}
-              {promoStatusFilter !== 'all' && (
-                <Badge variant="secondary">
-                  Status: {promoStatusFilter === 'active' ? 'Aktif' : 'Tidak Aktif'}
-                </Badge>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedOutletFilter('all');
-                  setPromoStatusFilter('all');
-                }}
-              >
-                Reset Filter
-              </Button>
+      {/* Promos List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Daftar Promo</CardTitle>
+          <CardDescription>
+            Semua promo yang tersedia dalam sistem
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : filteredPromos.length === 0 ? (
+            <div className="text-center py-12">
+              <Tag className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">
+                {searchQuery ? 'Promo tidak ditemukan' : 'Belum ada promo'}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                {searchQuery
+                  ? 'Coba ubah kata kunci pencarian'
+                  : 'Klik tombol "Buat Promo Baru" untuk memulai'}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Promo</TableHead>
+                    <TableHead>Tipe Diskon</TableHead>
+                    <TableHead>Nilai Diskon</TableHead>
+                    <TableHead>Hari Berlaku</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Produk Diterapkan</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPromos.map((promo) => {
+                    const appliedItems = getAppliedItemsForPromo(promo.id);
+                    const daysCount = promo.promoDays?.length || 0;
+                    
+                    return (
+                      <TableRow key={promo.id}>
+                        <TableCell className="font-medium">{promo.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {promo.promoType === 'percentage' ? 'Persentase' : 'Nominal'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-orange-600 font-semibold">
+                          {promo.promoType === 'percentage' 
+                            ? `${promo.promoValue}%` 
+                            : formatCurrency(promo.promoValue)}
+                        </TableCell>
+                        <TableCell>
+                          {daysCount > 0 ? (
+                            <Badge variant="secondary">
+                              {daysCount === 7 ? 'Setiap Hari' : `${daysCount} Hari`}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {promo.isActive ? (
+                            <Badge className="bg-green-500 hover:bg-green-600">
+                              Aktif
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Tidak Aktif
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {appliedItems.length > 0 ? (
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto"
+                              onClick={() => handleViewProducts(promo)}
+                            >
+                              {appliedItems.length} Item
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">0 Item</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditPromo(promo)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setPromoToDelete(promo.id);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Hapus
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="products">
-            <Package className="mr-2 h-4 w-4" />
-            Produk Satuan ({filteredProducts.length})
-          </TabsTrigger>
-          <TabsTrigger value="packages">
-            <PackagePlus className="mr-2 h-4 w-4" />
-            Paket ({filteredPackages.length})
-          </TabsTrigger>
-          <TabsTrigger value="bundles">
-            <Layers className="mr-2 h-4 w-4" />
-            Bundle ({filteredBundles.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Products Tab */}
-        <TabsContent value="products">
-          <Card>
-            <CardHeader>
-              <CardTitle>Promo Produk Satuan</CardTitle>
-              <CardDescription>
-                Konfigurasi promo untuk produk individual
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderPromoTable(
-                filteredProducts,
-                <Package className="mx-auto h-12 w-12 text-muted-foreground" />,
-                'Tidak ada produk'
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Packages Tab */}
-        <TabsContent value="packages">
-          <Card>
-            <CardHeader>
-              <CardTitle>Promo Paket</CardTitle>
-              <CardDescription>
-                Konfigurasi promo untuk paket bundling
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderPromoTable(
-                filteredPackages,
-                <PackagePlus className="mx-auto h-12 w-12 text-muted-foreground" />,
-                'Tidak ada paket'
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Bundles Tab */}
-        <TabsContent value="bundles">
-          <Card>
-            <CardHeader>
-              <CardTitle>Promo Bundle</CardTitle>
-              <CardDescription>
-                Konfigurasi promo untuk bundle kombinasi
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderPromoTable(
-                filteredBundles,
-                <Layers className="mx-auto h-12 w-12 text-muted-foreground" />,
-                'Tidak ada bundle'
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Edit Promo Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      {/* Create/Edit Promo Dialog */}
+      <Dialog open={isCreateEditDialogOpen} onOpenChange={setIsCreateEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-orange-500" />
-              {selectedItem?.promoEnabled ? 'Edit Promo' : 'Aktifkan Promo'}: {selectedItem?.name}
+              {selectedPromo ? 'Edit Promo' : 'Buat Promo Baru'}
             </DialogTitle>
             <DialogDescription>
-              Konfigurasi promo untuk {selectedItem?.itemType === 'product' ? 'produk' : selectedItem?.itemType === 'package' ? 'paket' : 'bundle'} ini
+              {selectedPromo ? 'Perbarui detail promo dan produk yang diterapkan' : 'Buat promo baru dan pilih produk yang akan diterapkan'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmitPromo}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
+              {/* Promo Name */}
+              <div className="space-y-2">
+                <Label htmlFor="promo-name">Nama Promo *</Label>
+                <Input
+                  id="promo-name"
+                  placeholder="Contoh: Diskon Akhir Tahun"
+                  value={promoForm.name}
+                  onChange={(e) => setPromoForm({ ...promoForm, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Promo Configuration */}
               <PromoConfigForm
-                value={promoConfig}
-                onChange={setPromoConfig}
-                originalPrice={selectedItem?.price}
+                value={{
+                  promoEnabled: true,
+                  promoType: promoForm.promoType,
+                  promoValue: promoForm.promoValue,
+                  promoDays: promoForm.promoDays,
+                  promoStartTime: promoForm.promoStartTime,
+                  promoEndTime: promoForm.promoEndTime,
+                  promoStartDate: promoForm.promoStartDate,
+                  promoEndDate: promoForm.promoEndDate,
+                  promoMinPurchase: promoForm.promoMinPurchase,
+                  promoDescription: promoForm.promoDescription,
+                }}
+                onChange={(config) => {
+                  setPromoForm({
+                    ...promoForm,
+                    promoType: config.promoType || 'fixed',
+                    promoValue: config.promoValue || 0,
+                    promoDays: config.promoDays || [],
+                    promoStartTime: config.promoStartTime || '',
+                    promoEndTime: config.promoEndTime || '',
+                    promoStartDate: config.promoStartDate,
+                    promoEndDate: config.promoEndDate,
+                    promoMinPurchase: config.promoMinPurchase,
+                    promoDescription: config.promoDescription,
+                  });
+                }}
               />
+
+              {/* Product Selection */}
+              <div className="space-y-2">
+                <Label>Pilih Produk yang Diterapkan</Label>
+                <p className="text-sm text-muted-foreground">
+                  Pilih produk, paket, atau bundle yang akan mendapatkan promo ini
+                </p>
+                
+                <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
+                  {/* Products */}
+                  {productsWithType.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Produk Satuan ({selectedProducts.length}/{productsWithType.length})
+                      </h4>
+                      <div className="space-y-2 ml-6">
+                        {productsWithType.map((product) => (
+                          <div key={product.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`product-${product.id}`}
+                              checked={selectedProducts.includes(product.id)}
+                              onCheckedChange={() => toggleProductSelection(product.id)}
+                            />
+                            <label
+                              htmlFor={`product-${product.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                            >
+                              {product.name} - {formatCurrency(product.price)}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Packages */}
+                  {packagesWithType.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <PackagePlus className="h-4 w-4" />
+                        Paket ({selectedPackages.length}/{packagesWithType.length})
+                      </h4>
+                      <div className="space-y-2 ml-6">
+                        {packagesWithType.map((pkg) => (
+                          <div key={pkg.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`package-${pkg.id}`}
+                              checked={selectedPackages.includes(pkg.id)}
+                              onCheckedChange={() => togglePackageSelection(pkg.id)}
+                            />
+                            <label
+                              htmlFor={`package-${pkg.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                            >
+                              {pkg.name} - {formatCurrency(pkg.price)}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bundles */}
+                  {bundlesWithType.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Layers className="h-4 w-4" />
+                        Bundle ({selectedBundles.length}/{bundlesWithType.length})
+                      </h4>
+                      <div className="space-y-2 ml-6">
+                        {bundlesWithType.map((bundle) => (
+                          <div key={bundle.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`bundle-${bundle.id}`}
+                              checked={selectedBundles.includes(bundle.id)}
+                              onCheckedChange={() => toggleBundleSelection(bundle.id)}
+                            />
+                            <label
+                              htmlFor={`bundle-${bundle.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                            >
+                              {bundle.name} - {formatCurrency(bundle.price)}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-2">
+                  Total dipilih: {selectedProducts.length + selectedPackages.length + selectedBundles.length} item
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
+                onClick={() => setIsCreateEditDialogOpen(false)}
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={updateProduct.isPending || updatePackage.isPending || updateBundle.isPending}>
-                {updateProduct.isPending || updatePackage.isPending || updateBundle.isPending
+              <Button 
+                type="submit" 
+                disabled={createPromo.isPending || updatePromo.isPending}
+              >
+                {createPromo.isPending || updatePromo.isPending
                   ? 'Menyimpan...'
-                  : 'Simpan Promo'}
+                  : selectedPromo ? 'Perbarui Promo' : 'Buat Promo'}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Promo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus promo ini? Tindakan ini tidak dapat dibatalkan.
+              Produk yang terhubung dengan promo ini akan kehilangan diskon.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePromo}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View Applied Products Dialog */}
+      <Dialog open={isViewProductsDialogOpen} onOpenChange={setIsViewProductsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Produk dengan Promo: {selectedPromo?.name}</DialogTitle>
+            <DialogDescription>
+              Daftar semua produk, paket, dan bundle yang menggunakan promo ini
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-4 py-4">
+              {selectedPromo && (() => {
+                const items = getAppliedItemsForPromo(selectedPromo.id);
+                
+                if (items.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Belum ada produk yang diterapkan promo ini
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipe</TableHead>
+                          <TableHead>Nama</TableHead>
+                          <TableHead>Harga Normal</TableHead>
+                          <TableHead>Diskon</TableHead>
+                          <TableHead>Harga Promo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item) => {
+                          const discount = selectedPromo.promoType === 'percentage'
+                            ? (item.price * selectedPromo.promoValue) / 100
+                            : selectedPromo.promoValue;
+                          const promoPrice = item.price - discount;
+
+                          return (
+                            <TableRow key={`${item.itemType}-${item.id}`}>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {item.itemType === 'product' && <Package className="h-3 w-3 mr-1" />}
+                                  {item.itemType === 'package' && <PackagePlus className="h-3 w-3 mr-1" />}
+                                  {item.itemType === 'bundle' && <Layers className="h-3 w-3 mr-1" />}
+                                  {item.itemType === 'product' ? 'Produk' : item.itemType === 'package' ? 'Paket' : 'Bundle'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell>{formatCurrency(item.price)}</TableCell>
+                              <TableCell className="text-orange-600 font-semibold">
+                                {formatCurrency(discount)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-green-600">
+                                    {formatCurrency(promoPrice)}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Hemat {formatCurrency(discount)}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

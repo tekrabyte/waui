@@ -178,6 +178,7 @@ export const api = {
         promoEndDate: item.promo_end_date || undefined,
         promoMinPurchase: item.promo_min_purchase ? Number(item.promo_min_purchase) : undefined,
         promoDescription: item.promo_description || undefined,
+        appliedPromoId: item.applied_promo_id ? String(item.applied_promo_id) : undefined,
       }));
     },
     getOne: async (id: string): Promise<Product> => {
@@ -259,6 +260,7 @@ export const api = {
         promoEndDate: pkg.promo_end_date || undefined,
         promoMinPurchase: pkg.promo_min_purchase ? Number(pkg.promo_min_purchase) : undefined,
         promoDescription: pkg.promo_description || undefined,
+        appliedPromoId: pkg.applied_promo_id ? String(pkg.applied_promo_id) : undefined,
       }));
     },
     create: async (data: any) => {
@@ -323,6 +325,7 @@ export const api = {
         promoEndDate: bundle.promo_end_date || undefined,
         promoMinPurchase: bundle.promo_min_purchase ? Number(bundle.promo_min_purchase) : undefined,
         promoDescription: bundle.promo_description || undefined,
+        appliedPromoId: bundle.applied_promo_id ? String(bundle.applied_promo_id) : undefined,
       }));
     },
     create: async (data: any) => {

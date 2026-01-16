@@ -720,4 +720,47 @@ export const useCreateUser = () => {
   });
 };
 
+/* =====================================================
+   STANDALONE PROMOS
+===================================================== */
+
+export const useListStandalonePromos = () =>
+  useQuery({
+    queryKey: ['standalonePromos'],
+    queryFn: async (): Promise<StandalonePromo[]> => {
+      return await api.standalonePromos.getAll();
+    },
+  });
+
+export const useCreateStandalonePromo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.standalonePromos.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['standalonePromos'] });
+    },
+  });
+};
+
+export const useUpdateStandalonePromo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      api.standalonePromos.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['standalonePromos'] });
+    },
+  });
+};
+
+export const useDeleteStandalonePromo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.standalonePromos.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['standalonePromos'] });
+    },
+  });
+};
+
     
