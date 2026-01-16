@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   useListProductsByOutlet, 
   useUpdateProduct, 
@@ -36,6 +37,7 @@ type PromoItem = (Product | ProductPackage | Bundle) & {
 };
 
 export default function PromoManagementPage() {
+  const queryClient = useQueryClient();
   const { data: userProfile } = useGetCallerUserProfile();
   const { data: isAdmin } = useIsCallerAdmin();
   const { data: outlets } = useListOutlets();
@@ -123,6 +125,19 @@ export default function PromoManagementPage() {
     return [...productsWithType, ...packagesWithType, ...bundlesWithType];
   }, [productsWithType, packagesWithType, bundlesWithType]);
 
+  // Auto-filter selected items when outlet selection changes
+  // This prevents "ghost selections" from deselected outlets
+  useEffect(() => {
+    const visibleProductIds = new Set(productsWithType.map(p => p.id));
+    const visiblePackageIds = new Set(packagesWithType.map(p => p.id));
+    const visibleBundleIds = new Set(bundlesWithType.map(b => b.id));
+
+    // Filter out selected items that are no longer visible
+    setSelectedProducts(prev => prev.filter(id => visibleProductIds.has(id)));
+    setSelectedPackages(prev => prev.filter(id => visiblePackageIds.has(id)));
+    setSelectedBundles(prev => prev.filter(id => visibleBundleIds.has(id)));
+  }, [productsWithType, packagesWithType, bundlesWithType]);
+
   // Filter promos by search
   const filteredPromos = useMemo(() => {
     if (!promos) return [];
@@ -201,6 +216,13 @@ export default function PromoManagementPage() {
       return;
     }
 
+    // Validasi: minimal harus ada 1 item yang dipilih
+    const totalSelectedItems = selectedProducts.length + selectedPackages.length + selectedBundles.length;
+    if (totalSelectedItems === 0) {
+      toast.error('Pilih minimal 1 produk, paket, atau bundle untuk diterapkan promo!');
+      return;
+    }
+
     try {
       let promoId = selectedPromo?.id;
 
@@ -232,10 +254,18 @@ export default function PromoManagementPage() {
 
   const applyPromoToProducts = async (promoId: string) => {
     try {
+      console.log('Applying promo to products:', {
+        promoId,
+        selectedProducts,
+        selectedPackages,
+        selectedBundles,
+      });
+
       // Update products
       for (const productId of selectedProducts) {
         const product = products?.find(p => p.id === productId);
         if (product) {
+          console.log('Updating product:', product.id, product.name);
           await updateProduct.mutateAsync({
             id: product.id,
             name: product.name,
@@ -254,6 +284,7 @@ export default function PromoManagementPage() {
       for (const packageId of selectedPackages) {
         const pkg = packages?.find(p => p.id === packageId);
         if (pkg) {
+          console.log('Updating package:', pkg.id, pkg.name);
           await updatePackage.mutateAsync({
             id: pkg.id,
             name: pkg.name,
@@ -273,6 +304,7 @@ export default function PromoManagementPage() {
       for (const bundleId of selectedBundles) {
         const bundle = bundles?.find(b => b.id === bundleId);
         if (bundle) {
+          console.log('Updating bundle:', bundle.id, bundle.name);
           await updateBundle.mutateAsync({
             id: bundle.id,
             name: bundle.name,
@@ -300,6 +332,7 @@ export default function PromoManagementPage() {
 
       for (const product of currentAppliedProducts) {
         if (!selectedProducts.includes(product.id)) {
+          console.log('Removing promo from product:', product.id, product.name);
           await updateProduct.mutateAsync({
             id: product.id,
             name: product.name,
@@ -316,6 +349,7 @@ export default function PromoManagementPage() {
 
       for (const pkg of currentAppliedPackages) {
         if (!selectedPackages.includes(pkg.id)) {
+          console.log('Removing promo from package:', pkg.id, pkg.name);
           await updatePackage.mutateAsync({
             id: pkg.id,
             name: pkg.name,
@@ -333,6 +367,7 @@ export default function PromoManagementPage() {
 
       for (const bundle of currentAppliedBundles) {
         if (!selectedBundles.includes(bundle.id)) {
+          console.log('Removing promo from bundle:', bundle.id, bundle.name);
           await updateBundle.mutateAsync({
             id: bundle.id,
             name: bundle.name,
@@ -353,10 +388,17 @@ export default function PromoManagementPage() {
         }
       }
 
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+      await queryClient.invalidateQueries({ queryKey: ['packages'] });
+      await queryClient.invalidateQueries({ queryKey: ['bundles'] });
+
+      console.log('Promo applied successfully!');
       toast.success('Promo berhasil diterapkan ke produk!');
     } catch (err) {
       console.error('Error applying promo to products:', err);
       toast.error('Gagal menerapkan promo ke produk.');
+      throw err; // Re-throw to handle in handleSubmitPromo
     }
   };
 
