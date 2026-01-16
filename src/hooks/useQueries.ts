@@ -14,6 +14,7 @@ import {
   CashflowSummary,
   Category,
   Brand,
+  StandalonePromo,
 } from '../types/types';
 
 /* =====================================================
