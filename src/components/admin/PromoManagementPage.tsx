@@ -107,34 +107,55 @@ export default function PromoManagementPage() {
     if (!products) return [];
     // Filter by active outlet tab
     if (isOwner && activeOutletTab) {
+      // Special case: factory-stock tab
+      if (activeOutletTab === 'factory-stock' && factoryOutlet) {
+        return products
+          .filter(p => p.outletId === factoryOutlet.id)
+          .map(p => ({ ...p, itemType: 'product' as const }));
+      }
+      // Regular outlet filtering
       return products
         .filter(p => p.outletId === activeOutletTab)
         .map(p => ({ ...p, itemType: 'product' as const }));
     }
     return products.map(p => ({ ...p, itemType: 'product' as const }));
-  }, [products, activeOutletTab, isOwner]);
+  }, [products, activeOutletTab, isOwner, factoryOutlet]);
 
   const packagesWithType = useMemo((): PromoItem[] => {
     if (!packages) return [];
     // Filter by active outlet tab
     if (isOwner && activeOutletTab) {
+      // Special case: factory-stock tab
+      if (activeOutletTab === 'factory-stock' && factoryOutlet) {
+        return packages
+          .filter(p => p.outletId === factoryOutlet.id)
+          .map(p => ({ ...p, itemType: 'package' as const }));
+      }
+      // Regular outlet filtering
       return packages
         .filter(p => p.outletId === activeOutletTab)
         .map(p => ({ ...p, itemType: 'package' as const }));
     }
     return packages.map(p => ({ ...p, itemType: 'package' as const }));
-  }, [packages, activeOutletTab, isOwner]);
+  }, [packages, activeOutletTab, isOwner, factoryOutlet]);
 
   const bundlesWithType = useMemo((): PromoItem[] => {
     if (!bundles) return [];
     // Filter by active outlet tab
     if (isOwner && activeOutletTab) {
+      // Special case: factory-stock tab
+      if (activeOutletTab === 'factory-stock' && factoryOutlet) {
+        return bundles
+          .filter(b => b.outletId === factoryOutlet.id)
+          .map(b => ({ ...b, itemType: 'bundle' as const }));
+      }
+      // Regular outlet filtering
       return bundles
         .filter(b => b.outletId === activeOutletTab)
         .map(b => ({ ...b, itemType: 'bundle' as const }));
     }
     return bundles.map(b => ({ ...b, itemType: 'bundle' as const }));
-  }, [bundles, activeOutletTab, isOwner]);
+  }, [bundles, activeOutletTab, isOwner, factoryOutlet]);
 
   const allItems = useMemo(() => {
     return [...productsWithType, ...packagesWithType, ...bundlesWithType];
@@ -211,10 +232,28 @@ export default function PromoManagementPage() {
     const firstPackage = packages?.find(p => p.appliedPromoId === promo.id);
     const firstBundle = bundles?.find(b => b.appliedPromoId === promo.id);
     
-    if (firstProduct?.outletId) firstOutletId = firstProduct.outletId;
-    else if (firstPackage?.outletId) firstOutletId = firstPackage.outletId;
-    else if (firstBundle?.outletId) firstOutletId = firstBundle.outletId;
-    else if (outlets && outlets.length > 0) firstOutletId = outlets[0].id;
+    // Check if any item belongs to factory outlet
+    if (firstProduct?.outletId) {
+      if (factoryOutlet && firstProduct.outletId === factoryOutlet.id) {
+        firstOutletId = 'factory-stock';
+      } else {
+        firstOutletId = firstProduct.outletId;
+      }
+    } else if (firstPackage?.outletId) {
+      if (factoryOutlet && firstPackage.outletId === factoryOutlet.id) {
+        firstOutletId = 'factory-stock';
+      } else {
+        firstOutletId = firstPackage.outletId;
+      }
+    } else if (firstBundle?.outletId) {
+      if (factoryOutlet && firstBundle.outletId === factoryOutlet.id) {
+        firstOutletId = 'factory-stock';
+      } else {
+        firstOutletId = firstBundle.outletId;
+      }
+    } else if (outlets && outlets.length > 0) {
+      firstOutletId = outlets[0].id;
+    }
     
     setActiveOutletTab(firstOutletId);
     
