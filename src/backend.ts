@@ -1,0 +1,1 @@
+// backend saya ada di root posq-backend.php (file yang sebenarnya ada di server wordpress)
