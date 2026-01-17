@@ -1818,6 +1818,9 @@ class posq_Backend {
         if (isset($data['promo_description'])) {
             $update_data['promo_description'] = sanitize_textarea_field($data['promo_description']);
         }
+        if (array_key_exists('applied_promo_id', $data)) {
+    $update_data['applied_promo_id'] = $data['applied_promo_id'] ? (int) $data['applied_promo_id'] : null;
+}
 
         $wpdb->update(
             $wpdb->prefix . 'posq_products',
@@ -1984,7 +1987,9 @@ class posq_Backend {
         if (isset($data['promo_description'])) {
             $update_data['promo_description'] = sanitize_textarea_field($data['promo_description']);
         }
-
+        if (array_key_exists('applied_promo_id', $data)) {
+    $update_data['applied_promo_id'] = $data['applied_promo_id'] ? (int) $data['applied_promo_id'] : null;
+}
         if (!empty($update_data)) {
             $wpdb->update(
                 $wpdb->prefix . 'posq_packages',
@@ -2231,7 +2236,23 @@ class posq_Backend {
         if (isset($data['promo_description'])) {
             $update_data['promo_description'] = sanitize_textarea_field($data['promo_description']);
         }
+        if (array_key_exists('applied_promo_id', $data)) {
+    $update_data['applied_promo_id'] = $data['applied_promo_id'] ? (int) $data['applied_promo_id'] : null;
+}
+error_log('Update Product ID: ' . $id);
+error_log('Data received: ' . print_r($data, true));
+error_log('Update Data prepared: ' . print_r($update_data, true));
 
+$result = $wpdb->update(
+    $wpdb->prefix . 'posq_products',
+    $update_data,
+    ['id' => $id]
+);
+
+// Cek apakah update berhasil atau error
+if ($result === false) {
+    error_log('Database Error: ' . $wpdb->last_error);
+}
         if (!empty($update_data)) {
             $result = $wpdb->update(
                 $wpdb->prefix . 'posq_bundles',

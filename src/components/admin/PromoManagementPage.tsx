@@ -89,18 +89,45 @@ export default function PromoManagementPage() {
   // Active tab outlet for filtering products (including factory stock tab)
   const [activeOutletTab, setActiveOutletTab] = useState<string>('');
 
-  // Detect factory outlet (outlet with "Pabrik" in name or specific factory outlet)
+  // Detect factory outlet (outlet with "Pabrik" in name, ID "1", or first outlet as fallback)
   const factoryOutlet = useMemo(() => {
-    if (!outlets) return null;
-    return outlets.find(o => o.name.toLowerCase().includes('pabrik') || o.name.toLowerCase().includes('factory'));
+    if (!outlets || outlets.length === 0) return null;
+    
+    console.log('Detecting factory outlet from outlets:', outlets.map(o => ({ id: o.id, name: o.name })));
+    
+    // Try to find outlet with "pabrik" or "factory" in name
+    const foundByName = outlets.find(o => 
+      o.name.toLowerCase().includes('pabrik') || 
+      o.name.toLowerCase().includes('factory')
+    );
+    if (foundByName) {
+      console.log('Factory outlet found by name:', foundByName.id, foundByName.name);
+      return foundByName;
+    }
+    
+    // Fallback: Use outlet with ID "1" as factory
+    const foundById = outlets.find(o => o.id === '1');
+    if (foundById) {
+      console.log('Factory outlet found by ID "1":', foundById.id, foundById.name);
+      return foundById;
+    }
+    
+    // Final fallback: Use first outlet as factory
+    console.log('Using first outlet as factory:', outlets[0].id, outlets[0].name);
+    return outlets[0];
   }, [outlets]);
 
   // Set default outlet tab when outlets load
   useEffect(() => {
     if (isOwner && outlets && outlets.length > 0 && !activeOutletTab) {
-      setActiveOutletTab(outlets[0].id);
+      const nonFactoryOutlets = outlets.filter(o => !factoryOutlet || o.id !== factoryOutlet.id);
+      if (nonFactoryOutlets.length > 0) {
+        setActiveOutletTab(nonFactoryOutlets[0].id);
+      } else {
+        setActiveOutletTab('factory-stock');
+      }
     }
-  }, [outlets, isOwner, activeOutletTab]);
+  }, [outlets, isOwner, activeOutletTab, factoryOutlet]);
 
   // Convert data to PromoItem with itemType
   const productsWithType = useMemo((): PromoItem[] => {
@@ -187,9 +214,14 @@ export default function PromoManagementPage() {
     setSelectedProducts([]);
     setSelectedPackages([]);
     setSelectedBundles([]);
-    // Reset to first outlet tab
+    // Reset to first non-factory outlet tab, or factory-stock if no other outlets
     if (isOwner && outlets && outlets.length > 0) {
-      setActiveOutletTab(outlets[0].id);
+      const nonFactoryOutlets = outlets.filter(o => !factoryOutlet || o.id !== factoryOutlet.id);
+      if (nonFactoryOutlets.length > 0) {
+        setActiveOutletTab(nonFactoryOutlets[0].id);
+      } else {
+        setActiveOutletTab('factory-stock');
+      }
     }
     setIsCreateEditDialogOpen(true);
   };
@@ -317,8 +349,8 @@ export default function PromoManagementPage() {
       for (const productId of selectedProducts) {
         const product = products?.find(p => p.id === productId);
         if (product) {
-          console.log('Updating product:', product.id, product.name);
-          await updateProduct.mutateAsync({
+          console.log('Updating product:', product.id, product.name, 'with promo:', promoId);
+          const productPayload = {
             id: product.id,
             name: product.name,
             price: product.price,
@@ -328,7 +360,18 @@ export default function PromoManagementPage() {
             brandId: product.brandId ? Number(product.brandId) : null,
             image_url: product.image || undefined,
             applied_promo_id: promoId,
-          });
+          };
+          console.log('Product payload:', JSON.stringify(productPayload, null, 2));
+          
+          try {
+            const result = await updateProduct.mutateAsync(productPayload);
+            console.log('Product update success:', result);
+          } catch (error) {
+            console.error('Product update failed:', error);
+            throw error;
+          }
+        } else {
+          console.warn('Product not found for ID:', productId);
         }
       }
 
