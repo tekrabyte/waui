@@ -32,7 +32,7 @@ class POSQ_Auth {
             exit;
         }
     }
-
+ss
     /**
      * Get token from requests
      */
