@@ -872,6 +872,51 @@ export const api = {
     }
   },
 
+  // 20. STANDALONE PROMOS
+  standalonePromos: {
+    getAll: async () => {
+      const response = await fetch(`${BASE_URL}/standalone-promos`, { headers: getAuthHeaders() });
+      const data = await handleResponse(response);
+      return data.map((promo: any) => ({
+        id: String(promo.id),
+        name: promo.name,
+        promoType: promo.promo_type || 'fixed',
+        promoValue: promo.promo_value ? Number(promo.promo_value) : 0,
+        promoDays: promo.promo_days ? (typeof promo.promo_days === 'string' ? JSON.parse(promo.promo_days) : promo.promo_days) : [],
+        promoStartTime: promo.promo_start_time || '',
+        promoEndTime: promo.promo_end_time || '',
+        promoStartDate: promo.promo_start_date || undefined,
+        promoEndDate: promo.promo_end_date || undefined,
+        promoMinPurchase: promo.promo_min_purchase ? Number(promo.promo_min_purchase) : undefined,
+        promoDescription: promo.promo_description || '',
+        isActive: !!promo.is_active,
+        createdAt: promo.created_at,
+      }));
+    },
+    create: async (data: any) => {
+      const response = await fetch(`${BASE_URL}/standalone-promos`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return handleResponse(response);
+    },
+    update: async (id: string, data: any) => {
+      const response = await fetch(`${BASE_URL}/standalone-promos/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return handleResponse(response);
+    },
+    delete: async (id: string) => {
+      const response = await fetch(`${BASE_URL}/standalone-promos/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    }
+  },
   
 };
 
