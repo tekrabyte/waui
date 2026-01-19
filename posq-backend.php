@@ -3622,7 +3622,7 @@ if ($result === false) {
                 'createdAt' => $promo->created_at
             ];
         }
-        s
+        
         return $result;
     }
 
