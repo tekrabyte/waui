@@ -44,20 +44,20 @@ export function AdminLayout({ children, activePage, onNavigate, onLogout }: Admi
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'pos', label: 'POS', icon: ShoppingCart },
-    { id: 'kiosk', label: 'Kiosk', icon: Store },
-    { id: 'tables', label: 'Table Management', icon: Armchair },
     { id: 'outlets', label: 'Outlets', icon: Store },
-    { id: 'staff', label: 'Staff', icon: Users },
-    { id: 'customers', label: 'Customers', icon: UserCheck },
     { id: 'products', label: 'Products', icon: Package },
+    { id: 'staff', label: 'Staff', icon: Users },
     { id: 'inventory', label: 'Inventory', icon: Boxes },
     { id: 'categorybrand', label: 'Kategori & Brand', icon: Tags },
+    { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'cashflow', label: 'Cashflow', icon: DollarSign },
+    { id: 'tables', label: 'Table Management', icon: Armchair },
+    { id: 'customers', label: 'Customers', icon: UserCheck },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'promo', label: 'Promos', icon: FileText },
-    { id: 'cashflow', label: 'Cashflow', icon: DollarSign },
-    { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'pos', label: 'POS', icon: ShoppingCart },
+    { id: 'kiosk', label: 'Kiosk', icon: Store },
   ];
 
   return (
