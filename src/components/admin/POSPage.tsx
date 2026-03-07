@@ -165,7 +165,7 @@ export default function POSPage() {
     oscillator.stop(audioContext.currentTime + 0.5);
   };
 
-  const addToCart = (item: { id: bigint; name: string; price: bigint; stock: bigint }, isPackage: boolean) => {
+  const addToCart = (item: { id: string; name: string; price: number; stock: number }, isPackage: boolean) => {
     const cartId = `${isPackage ? 'pkg' : 'prod'}-${item.id.toString()}`;
     const existingItem = cart.find(cartItem => cartItem.id === cartId);
     
@@ -322,9 +322,9 @@ export default function POSPage() {
     }
 
     const items: TransactionItem[] = cart.map(item => ({
-      productId: BigInt(item.productId),
-      quantity: BigInt(item.quantity),
-      price: BigInt(Math.round(item.price)),
+      productId: item.productId,
+      quantity: item.quantity,
+      price: Math.round(item.price),
       isPackage: item.isPackage,
       isBundle: false,
     }));
@@ -333,7 +333,7 @@ export default function POSPage() {
       category: pm.category,
       subCategory: pm.subCategory,
       methodName: pm.methodName,
-      amount: BigInt(Math.round(parseFloat(pm.amount))),
+      amount: Math.round(parseFloat(pm.amount)),
     }));
 
     createTransaction.mutate(
@@ -452,7 +452,7 @@ export default function POSPage() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  const formatCurrency = (amount: number | bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -555,11 +555,11 @@ export default function POSPage() {
                                 variant="outline"
                                 className="h-auto flex flex-col items-start p-4"
                                 onClick={() => addToCart(product, false)}
-                                disabled={product.stock === BigInt(0)}
+                                disabled={product.stock === 0}
                               >
                                 <div className="font-semibold text-left">{product.name}</div>
                                 <div className="text-sm text-muted-foreground">{formatCurrency(product.price)}</div>
-                                <Badge variant={product.stock === BigInt(0) ? 'destructive' : 'secondary'} className="mt-2">
+                                <Badge variant={product.stock === 0 ? 'destructive' : 'secondary'} className="mt-2">
                                   Stok: {product.stock.toString()}
                                 </Badge>
                               </Button>
@@ -589,14 +589,14 @@ export default function POSPage() {
                           variant="outline"
                           className="h-auto flex flex-col items-start p-4"
                           onClick={() => addToCart(pkg, true)}
-                          disabled={pkg.stock === BigInt(0)}
+                          disabled={pkg.stock === 0}
                         >
                           <div className="flex items-center gap-1 font-semibold text-left">
                             <Package className="h-4 w-4" />
                             {pkg.name}
                           </div>
                           <div className="text-sm text-muted-foreground">{formatCurrency(pkg.price)}</div>
-                          <Badge variant={pkg.stock === BigInt(0) ? 'destructive' : 'secondary'} className="mt-2">
+                          <Badge variant={pkg.stock === 0 ? 'destructive' : 'secondary'} className="mt-2">
                             Stok: {pkg.stock.toString()} paket
                           </Badge>
                         </Button>

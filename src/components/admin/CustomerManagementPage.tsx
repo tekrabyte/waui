@@ -27,16 +27,20 @@ export default function CustomerManagementPage() {
     );
   }
 
-  const formatDate = (timestamp: bigint) => {
-    return new Date(Number(timestamp) / 1000000).toLocaleDateString('id-ID', {
+  const formatDate = (timestamp: number | string) => {
+    const ts = Number(timestamp);
+    const date = ts > 1e15 ? new Date(ts / 1_000_000) : ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+    return date.toLocaleDateString('id-ID', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
 
-  const formatDateTime = (timestamp: bigint) => {
-    return new Date(Number(timestamp) / 1000000).toLocaleString('id-ID', {
+  const formatDateTime = (timestamp: number | string) => {
+    const ts = Number(timestamp);
+    const date = ts > 1e15 ? new Date(ts / 1_000_000) : ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+    return date.toLocaleString('id-ID', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -45,7 +49,7 @@ export default function CustomerManagementPage() {
     });
   };
 
-  const formatCurrency = (amount: bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -73,8 +77,8 @@ export default function CustomerManagementPage() {
     );
   };
 
-  const handleStatusChange = (transactionId: bigint, newStatus: OrderStatus) => {
-    updateStatus.mutate({ transactionId, newStatus });
+  const handleStatusChange = (transactionId: string, newStatus: OrderStatus) => {
+    updateStatus.mutate({ id: transactionId, status: newStatus });
   };
 
   const filteredTransactions = allTransactions?.filter(t => {
@@ -169,28 +173,24 @@ export default function CustomerManagementPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama</TableHead>
-                      <TableHead>Principal ID</TableHead>
-                      <TableHead>Tanggal Registrasi</TableHead>
+                      <TableHead>Email / Telepon</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Total Pembelian</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {customers.map(([principal, profile]) => {
-                      const customerTransactions = allTransactions?.filter(t => t.userId === principal.toString()) || [];
-                      const totalSpent = customerTransactions.reduce((sum, t) => sum + Number(t.total), 0);
+                    {customers.map((customer: any) => {
+                      const customerTransactions = allTransactions?.filter(t => t.userId === String(customer.id)) || [];
+                      const totalSpent = customerTransactions.reduce((sum: number, t: any) => sum + Number(t.total), 0);
                       
                       return (
-                        <TableRow key={principal.toString()}>
-                          <TableCell className="font-medium">{profile.name}</TableCell>
-                          <TableCell className="font-mono text-xs">{principal.toString().slice(0, 20)}...</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatDate(profile.registeredAt)}
-                          </TableCell>
+                        <TableRow key={String(customer.id)}>
+                          <TableCell className="font-medium">{customer.name}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{customer.email || customer.phone || '-'}</TableCell>
                           <TableCell>
                             <Badge variant="default">Aktif</Badge>
                           </TableCell>
-                          <TableCell className="text-right">{formatCurrency(BigInt(totalSpent))}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(totalSpent)}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -241,15 +241,15 @@ export default function CustomerManagementPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransactions.map((transaction) => {
-                      const customer = customers?.find(([principal]) => principal.toString() === transaction.userId);
+                      const customer = customers?.find((c: any) => String(c.id) === String(transaction.userId));
                       
                       return (
                         <TableRow key={transaction.id.toString()}>
                           <TableCell className="font-mono text-xs">#{transaction.id.toString()}</TableCell>
                           <TableCell className="font-medium">
-                            {customer ? customer[1].name : 'Unknown'}
+                            {customer ? (customer as any).name : 'Unknown'}
                           </TableCell>
-                          <TableCell className="text-sm">{formatDateTime(transaction.timestamp)}</TableCell>
+                          <TableCell className="text-sm">{formatDateTime(transaction.createdAt || transaction.timestamp || Date.now())}</TableCell>
                           <TableCell className="font-medium">{formatCurrency(transaction.total)}</TableCell>
                           <TableCell>{getStatusBadge(transaction.status)}</TableCell>
                           <TableCell>

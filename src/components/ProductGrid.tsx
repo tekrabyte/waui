@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from '../types';
+import { Product } from '../types/types';
 import { ProductCard } from './ProductCard';
 import { motion } from 'framer-motion';
 interface ProductGridProps {

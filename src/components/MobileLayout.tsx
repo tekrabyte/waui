@@ -5,7 +5,7 @@ import { ProductChatList } from './ProductChatList';
 import { CategoryFilterChips } from './CategoryFilterChips';
 import { CartDrawer } from './CartDrawer';
 import { SettingsView } from './SettingsView';
-import { Product, Category, CartItem, Customer } from '../types';
+import { Product, Category, CartItem, Customer } from '../types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, MapPin, Clock, Settings } from 'lucide-react';
 interface MobileLayoutProps {

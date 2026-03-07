@@ -1,20 +1,18 @@
-import { useNavigate } from '@tanstack/react-router';
 import { useGetUserTransactionHistory } from '../../hooks/useQueries';
 import { useInternetIdentity } from '../../hooks/useInternetIdentity';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Receipt, Clock, CheckCircle2, XCircle, AlertCircle, LogIn } from 'lucide-react';
-import { OrderStatus } from '../../backend';
+import { OrderStatus } from '../../../types/types';
 
 export default function KioskOrdersPage() {
-  const navigate = useNavigate();
   const { identity, login } = useInternetIdentity();
   const { data: transactionHistory } = useGetUserTransactionHistory();
 
   const isAuthenticated = !!identity;
 
-  const formatCurrency = (amount: bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -22,7 +20,7 @@ export default function KioskOrdersPage() {
     }).format(Number(amount));
   };
 
-  const formatDate = (timestamp: bigint) => {
+  const formatDate = (timestamp: number) => {
     return new Date(Number(timestamp) / 1000000).toLocaleString('id-ID', {
       year: 'numeric',
       month: 'short',

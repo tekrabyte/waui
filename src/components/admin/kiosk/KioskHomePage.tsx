@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { Search, MapPin } from 'lucide-react';
 import { useListProductsByOutlet, useGetAllCategories } from '../../hooks/useQueries';
 import { useKioskCart } from '../../hooks/useKioskCart';
@@ -8,7 +7,6 @@ import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
 
 export default function KioskHomePage() {
-  const navigate = useNavigate();
   const { data: products = [], isLoading: productsLoading } = useListProductsByOutlet(null);
   const { data: categories = [] } = useGetAllCategories();
   const { addToCart } = useKioskCart();
@@ -29,7 +27,7 @@ export default function KioskHomePage() {
   });
 
   const handleAddToCart = (product: typeof products[0]) => {
-    if (product.stock <= 0n) {
+    if (product.stock <= 0) {
       toast.error('Produk habis');
       return;
     }
@@ -153,11 +151,11 @@ export default function KioskHomePage() {
                     <Button
                       size="sm"
                       onClick={() => handleAddToCart(product)}
-                      disabled={product.stock <= 0n}
+                      disabled={product.stock <= 0}
                       className="bg-[#1D6FFF] hover:bg-[#1557CC] text-white px-3 py-1 text-xs"
                       style={{ borderRadius: 0 }}
                     >
-                      {product.stock <= 0n ? 'Habis' : 'Add'}
+                      {product.stock <= 0 ? 'Habis' : 'Add'}
                     </Button>
                   </div>
                 </div>
@@ -201,11 +199,11 @@ export default function KioskHomePage() {
                   <Button
                     size="sm"
                     onClick={() => handleAddToCart(product)}
-                    disabled={product.stock <= 0n}
+                    disabled={product.stock <= 0}
                     className="bg-[#1D6FFF] hover:bg-[#1557CC] text-white px-3 py-1 text-xs"
                     style={{ borderRadius: 0 }}
                   >
-                    {product.stock <= 0n ? 'Habis' : 'Add'}
+                    {product.stock <= 0 ? 'Habis' : 'Add'}
                   </Button>
                 </div>
               </div>

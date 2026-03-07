@@ -18,7 +18,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Package, Box, Clock, CheckCircle2, X
 import { calculatePackageStock, calculateBundleStock } from '../../lib/packageStockCalculator';
 import { PaymentCategory, PaymentSubCategory, OrderStatus } from '../../types/types';
 import type { TransactionItem, PaymentMethod } from '../../types/types';
-import type { GuestCustomerData } from '../../backend';
+import type { GuestCustomerData } from '../../types/types';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -119,7 +119,7 @@ export default function KioskPage() {
     });
   }, [bundles, products, packages]);
 
-  const formatCurrency = (amount: bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -127,7 +127,7 @@ export default function KioskPage() {
     }).format(Number(amount));
   };
 
-  const formatDate = (timestamp: bigint) => {
+  const formatDate = (timestamp: number) => {
     return new Date(Number(timestamp) / 1000000).toLocaleString('id-ID', {
       year: 'numeric',
       month: 'short',
@@ -157,7 +157,7 @@ export default function KioskPage() {
     );
   };
 
-  const addToCart = (item: { id: bigint; name: string; price: bigint; type: 'product' | 'package' | 'bundle'; availableStock: bigint }) => {
+  const addToCart = (item: { id: string; name: string; price: number; type: 'product' | 'package' | 'bundle'; availableStock: number }) => {
     const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
     if (existingItem) {
       if (existingItem.quantity < Number(item.availableStock)) {
@@ -168,13 +168,13 @@ export default function KioskPage() {
         ));
       }
     } else {
-      if (item.availableStock > 0n) {
+      if (item.availableStock > 0) {
         setCart([...cart, { ...item, quantity: 1 }]);
       }
     }
   };
 
-  const updateQuantity = (id: bigint, type: string, delta: number) => {
+  const updateQuantity = (id: string, type: string, delta: number) => {
     setCart(cart.map(item => {
       if (item.id === id && item.type === type) {
         const newQuantity = item.quantity + delta;
@@ -186,7 +186,7 @@ export default function KioskPage() {
     }).filter(item => item.quantity > 0));
   };
 
-  const removeFromCart = (id: bigint, type: string) => {
+  const removeFromCart = (id: string, type: string) => {
     setCart(cart.filter(item => !(item.id === id && item.type === type)));
   };
 
@@ -256,7 +256,7 @@ export default function KioskPage() {
 
     const items: TransactionItem[] = cart.map(item => ({
       productId: item.id,
-      quantity: BigInt(item.quantity),
+      quantity: item.quantity,
       price: item.price,
       isPackage: item.type === 'package',
       isBundle: item.type === 'bundle',
@@ -266,7 +266,7 @@ export default function KioskPage() {
       category: PaymentCategory.online,
       subCategory: paymentMethod === 'qris' ? PaymentSubCategory.qris : undefined,
       methodName: paymentMethod === 'qris' ? 'QRIS Statis' : 'Transfer Bank',
-      amount: BigInt(cartTotal),
+      amount: cartTotal,
     }];
 
     const guestCustomerData: GuestCustomerData | null = isGuest ? {
@@ -358,7 +358,7 @@ export default function KioskPage() {
           <CardDescription>Pilih outlet untuk melihat produk yang tersedia</CardDescription>
         </CardHeader>
         <CardContent>
-          <Select value={selectedOutletId?.toString() || ''} onValueChange={(value) => setSelectedOutletId(BigInt(value))}>
+          <Select value={selectedOutletId?.toString() || ''} onValueChange={(value) => setSelectedOutletId(value)}>
             <SelectTrigger>
               <SelectValue placeholder="Pilih outlet" />
             </SelectTrigger>
@@ -396,7 +396,7 @@ export default function KioskPage() {
                               {formatCurrency(product.price)}
                             </CardDescription>
                           </div>
-                          <Badge variant={product.stock > 0n ? 'default' : 'secondary'}>
+                          <Badge variant={product.stock > 0 ? 'default' : 'secondary'}>
                             Stok: {product.stock.toString()}
                           </Badge>
                         </div>
@@ -410,7 +410,7 @@ export default function KioskPage() {
                             type: 'product',
                             availableStock: product.stock,
                           })}
-                          disabled={product.stock === 0n}
+                          disabled={product.stock === 0}
                           className="w-full"
                         >
                           <Plus className="mr-2 h-4 w-4" />
@@ -437,7 +437,7 @@ export default function KioskPage() {
                               {formatCurrency(pkg.price)}
                             </CardDescription>
                           </div>
-                          <Badge variant={pkg.calculatedStock > 0n ? 'default' : 'secondary'}>
+                          <Badge variant={pkg.calculatedStock > 0 ? 'default' : 'secondary'}>
                             Stok: {pkg.calculatedStock.toString()}
                           </Badge>
                         </div>
@@ -451,7 +451,7 @@ export default function KioskPage() {
                             type: 'package',
                             availableStock: pkg.calculatedStock,
                           })}
-                          disabled={pkg.calculatedStock === 0n}
+                          disabled={pkg.calculatedStock === 0}
                           className="w-full"
                         >
                           <Plus className="mr-2 h-4 w-4" />
@@ -478,7 +478,7 @@ export default function KioskPage() {
                               {formatCurrency(bundle.price)}
                             </CardDescription>
                           </div>
-                          <Badge variant={bundle.calculatedStock > 0n ? 'default' : 'secondary'}>
+                          <Badge variant={bundle.calculatedStock > 0 ? 'default' : 'secondary'}>
                             Stok: {bundle.calculatedStock.toString()}
                           </Badge>
                         </div>
@@ -492,7 +492,7 @@ export default function KioskPage() {
                             type: 'bundle',
                             availableStock: bundle.calculatedStock,
                           })}
-                          disabled={bundle.calculatedStock === 0n}
+                          disabled={bundle.calculatedStock === 0}
                           className="w-full"
                         >
                           <Plus className="mr-2 h-4 w-4" />
@@ -566,7 +566,7 @@ export default function KioskPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>{formatCurrency(BigInt(cartTotal))}</span>
+                    <span>{formatCurrency(cartTotal)}</span>
                   </div>
                 </div>
 
@@ -671,7 +671,7 @@ export default function KioskPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Total Pembayaran</Label>
-              <p className="text-2xl font-bold text-primary">{formatCurrency(BigInt(cartTotal))}</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(cartTotal)}</p>
             </div>
 
             <Separator />
@@ -788,7 +788,7 @@ export default function KioskPage() {
           <div className="space-y-4">
             <div className="text-center p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground mb-2">Total yang harus dibayar</p>
-              <p className="text-3xl font-bold text-primary">{formatCurrency(BigInt(cartTotal))}</p>
+              <p className="text-3xl font-bold text-primary">{formatCurrency(cartTotal)}</p>
             </div>
 
             {paymentMethod === 'qris' && paymentSettings?.qrisStaticImageBlob && (
@@ -812,7 +812,7 @@ export default function KioskPage() {
                       <li>Buka aplikasi e-wallet atau mobile banking Anda</li>
                       <li>Pilih menu Scan QR atau QRIS</li>
                       <li>Scan QR code di atas</li>
-                      <li>Konfirmasi pembayaran sebesar {formatCurrency(BigInt(cartTotal))}</li>
+                      <li>Konfirmasi pembayaran sebesar {formatCurrency(cartTotal)}</li>
                       <li>Upload bukti pembayaran di bawah setelah berhasil</li>
                     </ol>
                   </AlertDescription>
@@ -843,7 +843,7 @@ export default function KioskPage() {
                       <li>Buka aplikasi mobile banking Anda</li>
                       <li>Pilih menu Transfer</li>
                       <li>Masukkan nomor rekening di atas</li>
-                      <li>Transfer sebesar {formatCurrency(BigInt(cartTotal))}</li>
+                      <li>Transfer sebesar {formatCurrency(cartTotal)}</li>
                       <li>Upload bukti pembayaran di bawah setelah berhasil</li>
                     </ol>
                   </AlertDescription>

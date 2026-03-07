@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Category, Customer } from '../types';
+import { Category, Customer } from '../types/types';
 import { CategoryList } from './CategoryList';
 import { CustomerList } from './CustomerList';
 import { Avatar } from './ui/Avatar';

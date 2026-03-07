@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CartItem } from '../types';
+import { CartItem } from '../types/types';
 import { ShoppingBag, X, Minus, Plus, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 interface CartProps {

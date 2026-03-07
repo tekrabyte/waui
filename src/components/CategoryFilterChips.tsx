@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category } from '../types';
+import { Category } from '../types/types';
 import { motion } from 'framer-motion';
 interface CategoryFilterChipsProps {
   categories: Category[];

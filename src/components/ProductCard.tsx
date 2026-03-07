@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from '../types';
+import { Product } from '../types/types';
 import { Plus, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 interface ProductCardProps {

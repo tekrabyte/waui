@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { Search, ArrowLeft } from 'lucide-react';
 import { useGetAllCategories } from '../../hooks/useQueries';
 import { Input } from '../../components/ui/input';
 
 export default function KioskCategoriesPage() {
-  const navigate = useNavigate();
   const { data: categories = [], isLoading } = useGetAllCategories();
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = (_opts: any) => { /* stub - not using router */ };
 
   const filteredCategories = categories.filter(cat =>
     cat.isActive && cat.name.toLowerCase().includes(searchQuery.toLowerCase())

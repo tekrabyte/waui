@@ -144,7 +144,7 @@ export interface ProductPackage {
     productId: string;
     quantity: number;
   }[];
-  stock?: bigint;
+  stock?: number;
   isActive?: boolean;
   outletId?: string;
   categoryId?: string;

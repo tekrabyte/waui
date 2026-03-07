@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category } from '../types';
+import { Category } from '../types/types';
 import { Avatar } from './ui/Avatar';
 import { motion } from 'framer-motion';
 interface CategoryListProps {

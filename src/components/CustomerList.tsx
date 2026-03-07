@@ -1,5 +1,5 @@
 import React from 'react';
-import { Customer } from '../types';
+import { Customer } from '../types/types';
 import { Avatar } from './ui/Avatar';
 import { motion } from 'framer-motion';
 interface CustomerListProps {

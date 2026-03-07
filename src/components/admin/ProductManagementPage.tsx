@@ -725,7 +725,7 @@ export default function ProductManagementPage() {
     }
   };
 
-  const formatCurrency = (amount: number | bigint) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',

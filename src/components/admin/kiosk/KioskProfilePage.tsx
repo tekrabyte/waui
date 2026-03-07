@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { useInternetIdentity } from '../../hooks/useInternetIdentity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,8 +17,8 @@ interface GuestProfileData {
 }
 
 export default function KioskProfilePage() {
-  const navigate = useNavigate();
-  const { identity, login, clear } = useInternetIdentity();
+  const navigate = (_opts: any) => { /* stub - not using router */ };
+  const { identity, login, logout: clear } = useInternetIdentity();
   const [guestData, setGuestData] = useState<GuestProfileData>({
     name: '',
     phone: '',

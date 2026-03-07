@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from '../types';
+import { Product } from '../types/types';
 import { MobileProductCard } from './MobileProductCard';
 import { motion } from 'framer-motion';
 interface ProductChatListProps {
